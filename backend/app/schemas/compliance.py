@@ -24,10 +24,12 @@ class ComplianceCheckCreate(BaseModel):
 class RuleFindingOut(BaseModel):
     check_id: str
     rule_key: str
-    rule_version: str
+    # Defaults tolerate historical/demo finding rows that were persisted
+    # without these fields; the live screening engine always provides both.
+    rule_version: str = "1.0.0"
     severity: str
     triggered: bool
-    explanation: str
+    explanation: str = ""
     matched_excerpt: str | None = None
     remediation: str | None = None
 

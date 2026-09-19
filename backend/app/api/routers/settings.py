@@ -35,6 +35,18 @@ def _redact_value(key: str, value):
     }
 
 
+def _public_value(key: str, value):
+    """Unwrap the {"value": ...} storage envelope so readers get raw values.
+
+    Seed rows store {"value": x}; the redaction step runs first for sensitive
+    keys. Anything not in envelope form passes through untouched.
+    """
+    v = _redact_value(key, value)
+    if isinstance(v, dict) and set(v.keys()) == {"value"}:
+        return v["value"]
+    return v
+
+
 def _out(row: Setting) -> SettingOut:
     return SettingOut.model_validate(row)
 
@@ -47,7 +59,49 @@ def get_all_settings(db: Annotated[Session, Depends(get_db)]):
     presence/configured flags are exposed, never session material.
     """
     rows = db.query(Setting).order_by(Setting.key).all()
-    return {r.key: _redact_value(r.key, r.value) for r in rows}
+    return {r.key: _public_value(r.key, r.value) for r in rows}
+
+
+@router.patch("", response_model=dict[str, Any])
+def bulk_update_settings(body: dict[str, Any], db: Annotated[Session, Depends(get_db)]):
+    """Bulk update settings. Accepts {"key": value} or {"settings": [{"key": k, "value": v}]}."""
+    if isinstance(body.get("settings"), list):
+        updates = {item["key"]: item.get("value") for item in body["settings"] if isinstance(item, dict) and "key" in item}
+    else:
+        updates = {k: v for k, v in body.items() if k != "settings"}
+    if not updates:
+        raise bad_request("EMPTY_SETTINGS_PATCH", "No settings provided.")
+    for key, value in updates.items():
+        if key in _SENSITIVE_KEYS:
+            raise bad_request(
+                "SENSITIVE_SETTING_KEY",
+                f"Setting '{key}' cannot be written here — use PUT /api/private/connection.",
+                key=key,
+            )
+        if key not in _CANONICAL and not key.startswith("feature."):
+            raise bad_request(
+                "UNKNOWN_SETTING_KEY",
+                f"Setting '{key}' is not a canonical key and cannot be created.",
+                key=key,
+            )
+        row = db.query(Setting).filter_by(key=key).one_or_none()
+        if row is None:
+            row = Setting(key=key, value={"value": value})
+            db.add(row)
+        else:
+            before = row.value
+            row.value = {"value": value}
+            audit_log(
+                db,
+                action="update_setting",
+                entity_kind="setting",
+                entity_id=row.id,
+                before={"value": before},
+                after={"value": value},
+            )
+    db.commit()
+    rows = db.query(Setting).order_by(Setting.key).all()
+    return {r.key: _public_value(r.key, r.value) for r in rows}
 
 
 @router.get("/keys", response_model=list[str])

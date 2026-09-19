@@ -67,7 +67,7 @@ function CapacityPanel() {
   const { toast } = useToast();
   const settings = useSettings();
   const muts = useSettingsMutations();
-  const queue = useQueue({ page_size: 200 });
+  const queue = useQueue({ page_size: 100 });
 
   const weekly = Number(settings.data?.["planner.weekly_capacity"] ?? 0);
   const [draft, setDraft] = useState<string | null>(null);
@@ -184,7 +184,7 @@ function GateListPanel() {
 // ---------------------------------------------------------------------------
 
 function CalendarPanel({ month, onMonth }: { month: { y: number; m: number }; onMonth: (v: { y: number; m: number }) => void }) {
-  const queue = useQueue({ page_size: 300 });
+  const queue = useQueue({ page_size: 100 });
 
   const cells = useMemo(() => {
     const first = new Date(month.y, month.m, 1);

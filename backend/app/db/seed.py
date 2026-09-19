@@ -1343,7 +1343,7 @@ def seed_demo(session: Session) -> dict[str, int]:
             result=ComplianceResult.PASS,
             risk_level=RiskLevel.LOW,
             findings=[
-                {"rule_key": "gen-01", "severity": "BLOCK", "triggered": False, "mock": True}
+                {"rule_key": "gen-01", "rule_version": "1.0.0", "severity": "BLOCK", "triggered": False, "explanation": "Demo finding.", "mock": True}
             ],
             explanation=f"Demo check ({DEMO_BATCH}): assessed as PASS on text fields; does not guarantee Adobe Stock acceptance.",
         )
@@ -1353,7 +1353,7 @@ def seed_demo(session: Session) -> dict[str, int]:
             check_type=ComplianceCheckType.METADATA_SCREEN,
             result=ComplianceResult.REVIEW,
             risk_level=RiskLevel.MEDIUM,
-            findings=[{"rule_key": "mh-05", "severity": "INFO", "triggered": True, "mock": True}],
+            findings=[{"rule_key": "mh-05", "rule_version": "1.0.0", "severity": "INFO", "triggered": True, "explanation": "Demo finding.", "mock": True}],
             explanation=f"Demo check ({DEMO_BATCH}): assessed as REVIEW — category mapping needs human confirmation.",
         )
     )

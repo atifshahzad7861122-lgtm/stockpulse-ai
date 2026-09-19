@@ -65,7 +65,7 @@ function QueuePage() {
   const [detailId, setDetailId] = useState<string | null>(params.get("item"));
   const [addOpen, setAddOpen] = useState(false);
 
-  const queue = useQueue({ page_size: 200, sort: "-priority_score" });
+  const queue = useQueue({ page_size: 100, sort: "-priority_score" });
   const settings = useSettings();
 
   const items = useMemo(() => {

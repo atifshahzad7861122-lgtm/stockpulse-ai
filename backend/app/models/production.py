@@ -23,7 +23,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import AuditTimestampsMixin, Base, SoftDeleteMixin, UUIDPrimaryKeyMixin, utcnow
 from app.schemas.enums import AssetStatus, AssetType, ProductionQueueStatus, SubmissionStatus
@@ -55,6 +55,13 @@ class Asset(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin, SoftDeleteMixin):
     height_px: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Numeric(8, 2), nullable=True)
 
+    versions: Mapped[list[AssetVersion]] = relationship(
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        order_by="AssetVersion.version_number",
+        primaryjoin="Asset.id == foreign(AssetVersion.asset_id)",
+    )
+
 
 class AssetVersion(Base, UUIDPrimaryKeyMixin):
     """Immutable file version (docs: 08 §9.2). Cascade-deleted with the asset."""
@@ -74,6 +81,11 @@ class AssetVersion(Base, UUIDPrimaryKeyMixin):
     created_by: Mapped[str] = mapped_column(String(32), nullable=False, default="user")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow
+    )
+
+    asset: Mapped[Asset] = relationship(
+        back_populates="versions",
+        primaryjoin="foreign(AssetVersion.asset_id) == Asset.id",
     )
 
     __table_args__ = (

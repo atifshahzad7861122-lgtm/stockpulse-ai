@@ -180,18 +180,27 @@ def board(
     asset_type: AssetType | None = None,
     priority_band: Annotated[str | None, Query(pattern="^P[0-4]$")] = None,
     group_by_status: bool = False,
+    sort: Annotated[str | None, Query(pattern="^(-priority_score|created_at)$")] = None,
 ):
-    q = db.query(ProductionQueue).order_by(ProductionQueue.created_at.desc())
+    q = db.query(ProductionQueue)
     if status is not None:
         q = q.filter_by(status=status)
     if asset_type is not None:
         q = q.filter_by(asset_type=asset_type)
     if priority_band:
         q = q.filter_by(priority_band=priority_band)
-    total = q.count()
     page, page_size = paging["page"], paging["page_size"]
-    rows = q.offset((page - 1) * page_size).limit(page_size).all()
-    return paginate([_out(db, r) for r in rows], page=page, page_size=page_size, total=total)
+    if sort == "-priority_score":
+        # priority_score is computed in Python (_out), so sort in memory.
+        items = [_out(db, r) for r in q.all()]
+        items.sort(key=lambda i: i.priority_score, reverse=True)
+        total = len(items)
+        items = items[(page - 1) * page_size : page * page_size]
+    else:
+        total = q.count()
+        rows = q.order_by(ProductionQueue.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+        items = [_out(db, r) for r in rows]
+    return paginate(items, page=page, page_size=page_size, total=total)
 
 
 @router.post("/queue", response_model=QueueItemOut, status_code=201)
