@@ -23,6 +23,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { overlayTransition } from "./motion/easing";
 import { CountUp } from "./motion/motion";
 import { AlertTriangle, ChevronDown, Inbox, Loader2, RefreshCw, X } from "lucide-react";
+import { errorMessage, errorTraceId } from "../services/api";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
@@ -933,7 +934,9 @@ export function QueryView<T>({
     data: T | undefined;
     isLoading: boolean;
     isError: boolean;
-    error: { envelope: { message: string; trace_id?: string } } | null;
+    // unknown on purpose: React Query surfaces whatever the queryFn threw —
+    // contract ApiClientErrors AND plain network TypeErrors (no .envelope).
+    error: unknown;
     refetch: () => void;
     isFetching?: boolean;
   };
@@ -954,8 +957,8 @@ export function QueryView<T>({
     return (
       <ErrorState
         title={errorTitle ?? "Could not load this data"}
-        message={error?.envelope.message}
-        traceId={error?.envelope.trace_id}
+        message={errorMessage(error)}
+        traceId={errorTraceId(error)}
         onRetry={() => refetch()}
       />
     );
