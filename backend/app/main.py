@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ARG001
+    # Production safety: never boot against the local SQLite file when the
+    # operator asked for production. A missing DATABASE_URL on Railway would
+    # otherwise silently run on an ephemeral SQLite file and lose all data on
+    # redeploy. Fail fast with a clear message instead.
+    if settings.app_env == "production" and settings.database_url.startswith("sqlite"):
+        raise RuntimeError(
+            "Refusing to boot with APP_ENV=production and a SQLite DATABASE_URL. "
+            "Set DATABASE_URL to the Railway PostgreSQL connection string."
+        )
     init_db()
     # Phase 2 collection scheduler — opt-out via STOCKPULSE_SCHEDULER_ENABLED=false.
     if scheduler_enabled():
