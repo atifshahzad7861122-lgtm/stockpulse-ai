@@ -102,3 +102,20 @@ def test_source_health_surfaces_real_check(client, db):
     assert h["status"] == "AVAILABLE"
     assert h["records_collected"] == 42
     assert h["source_name"] == src.name
+
+
+def test_collection_runs_filters(client, db):
+    """Regression: /api/sources/runs honors status/trigger/source_id query params."""
+    from app.models.intelligence import TrendSource
+
+    src = db.query(TrendSource).first()
+    params = {"page_size": 10}
+    if src is not None:
+        params["source_id"] = src.id
+    r = client.get(
+        "/api/sources/runs",
+        params={**params, "status": "SUCCESS", "trigger": "API"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "data" in body and "pagination" in body

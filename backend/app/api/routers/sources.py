@@ -185,11 +185,20 @@ def source_health(db: Annotated[Session, Depends(get_db)]):
 def list_collection_runs(
     db: Annotated[Session, Depends(get_db)],
     paging: Annotated[dict, Depends(pagination_params)],
+    status: str | None = None,
+    trigger: str | None = None,
+    source_id: str | None = None,
 ):
     CollectionRun, _ = _source_models()
     if CollectionRun is None:
         return paginate([], page=paging["page"], page_size=paging["page_size"], total=0)
     q = db.query(CollectionRun).order_by(CollectionRun.started_at.desc())
+    if status is not None:
+        q = q.filter_by(status=status)
+    if trigger is not None:
+        q = q.filter_by(trigger=trigger)
+    if source_id is not None:
+        q = q.filter_by(trend_source_id=source_id)
     total = q.count()
     page, page_size = paging["page"], paging["page_size"]
     rows = q.offset((page - 1) * page_size).limit(page_size).all()

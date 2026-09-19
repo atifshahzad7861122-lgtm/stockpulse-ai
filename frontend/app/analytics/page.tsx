@@ -275,9 +275,9 @@ function ExportsPanel() {
       <QueryView query={exports} loading={<Skeleton lines={3} />}
         empty={<EmptyState compact title="No exports yet" description="Request a CSV export above — the file appears here when the job finishes." />}
         errorTitle="Exports unavailable">
-        {(list) => (
+        {(exportsList) => (
           <ul className="space-y-2">
-            {list.map((e) => (
+            {(exportsList?.data ?? exportsList?.items ?? []).map((e) => (
               <li key={e.id} className="flex items-center gap-3 rounded-md border border-border bg-bg-secondary px-3 py-2.5 text-[13px]">
                 <span className="min-w-0 flex-1 text-text-secondary">
                   <span className="font-medium text-text-primary">{e.kind}</span> · requested {timeAgo(e.created_at)}

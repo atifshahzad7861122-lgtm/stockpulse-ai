@@ -40,10 +40,13 @@ def _public_value(key: str, value):
 
     Seed rows store {"value": x}; the redaction step runs first for sensitive
     keys. Anything not in envelope form passes through untouched.
+    Floats are rounded to 4 decimals to hide float32 storage artifacts.
     """
     v = _redact_value(key, value)
     if isinstance(v, dict) and set(v.keys()) == {"value"}:
-        return v["value"]
+        v = v["value"]
+    if isinstance(v, float):
+        return round(v, 4)
     return v
 
 
