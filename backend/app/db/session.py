@@ -16,8 +16,26 @@ def _is_sqlite(url: str) -> bool:
     return url.startswith("sqlite")
 
 
+def _normalize_database_url(url: str) -> str:
+    """Map hosted-Postgres URL formats to the SQLAlchemy dialect we ship.
+
+    Railway's PostgreSQL plugin provides DATABASE_URL as ``postgresql://...``
+    (sometimes legacy ``postgres://...``) with NO DBAPI driver suffix.
+    SQLAlchemy 2.x requires an explicit driver, so bare ``postgresql://`` /
+    ``postgres://`` schemes are rewritten to ``postgresql+psycopg://``.
+    The production image installs ``psycopg[binary]`` (see
+    deploy/backend.Dockerfile). SQLite and fully-qualified URLs pass through
+    unchanged.
+    """
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
 def get_engine():
-    url = settings.database_url
+    url = _normalize_database_url(settings.database_url)
     if _is_sqlite(url):
         return create_engine(url, connect_args={"check_same_thread": False}, future=True)
     return create_engine(
