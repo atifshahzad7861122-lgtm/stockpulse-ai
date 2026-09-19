@@ -198,7 +198,7 @@ export const api = {
 
   // §5.3 Categories
   categories: {
-    list: () => get<Category[]>(`/categories`),
+    list: async (): Promise<Category[]> => { const r = await get<Page<Category> | Category[]>(`/categories`); return Array.isArray(r) ? r : r.data; },
     detail: (id: string) => get<Category>(`/categories/${id}`),
   },
 
