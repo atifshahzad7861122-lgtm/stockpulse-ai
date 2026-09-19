@@ -152,12 +152,33 @@ def _get_source(db: Session, source_id: str) -> TrendSource:
 
 @router.get("/health", response_model=list[SourceHealthOut])
 def source_health(db: Annotated[Session, Depends(get_db)]):
-    """All SourceHealth rows: status, last success/failure, counts, auth state."""
-    _, SourceHealth = _source_models()
-    if SourceHealth is None:
-        return []
-    rows = db.query(SourceHealth).order_by(SourceHealth.checked_at.desc()).limit(500).all()
-    return [_health_out(r) for r in rows]
+    """Per-source health, left-joined against the source registry.
+
+    Every registered source appears exactly once: with its latest health
+    check, or with status NOT_CHECKED when the scheduler has never checked
+    it. Counts therefore reconcile with GET /api/sources.
+    """
+    sources = db.query(TrendSource).order_by(TrendSource.name).all()
+    health = _health_map(db, [s.id for s in sources])
+    out: list[SourceHealthOut] = []
+    for s in sources:
+        h = health.get(s.id)
+        source_type = str(getattr(s.source_type, "value", s.source_type))
+        if h is None:
+            out.append(
+                SourceHealthOut(
+                    id=f"not-checked-{s.id}",
+                    trend_source_id=s.id,
+                    source_name=s.name,
+                    source_type=source_type,
+                    status=SourceStatus.NOT_CHECKED,
+                )
+            )
+        else:
+            h.source_name = s.name
+            h.source_type = source_type
+            out.append(h)
+    return out
 
 
 @router.get("/runs", response_model=Page[CollectionRunOut])

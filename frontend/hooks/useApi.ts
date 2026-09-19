@@ -10,8 +10,10 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 import { api, ApiClientError, errorMessage, type ListParams } from "../services/api";
 import { qk } from "../services/queryKeys";
+import { useJobPoll } from "./useJobPoll";
 import type {
   AdobeConnection,
   AgentDefinition,
@@ -142,15 +144,58 @@ export function useTrendSignals(id: string | null, opts?: QueryOpts<TrendSignal[
 export function useRefreshTrends() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  return useMutation({
+  const [jobId, setJobId] = useState<string | null>(null);
+  const doneRef = useRef(false);
+
+  // Invalidate every panel the analysis can change, so badges/cards cannot
+  // disagree after the job finishes (queue depth, opportunities, capacity).
+  const invalidateAnalysisOutputs = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["trends"] });
+    qc.invalidateQueries({ queryKey: ["opportunities"] });
+    qc.invalidateQueries({ queryKey: ["production"] });
+    qc.invalidateQueries({ queryKey: ["daily"] });
+    qc.invalidateQueries({ queryKey: ["ideas"] });
+    qc.invalidateQueries({ queryKey: ["agents"] });
+  }, [qc]);
+
+  const poll = useJobPoll(jobId, {
+    onDone: (job) => {
+      setJobId(null);
+      if (doneRef.current) return;
+      doneRef.current = true;
+      if (job.status === "succeeded") {
+        toast({ title: "Analysis complete", description: "Trend data refreshed — all panels updated.", tone: "success" });
+      } else {
+        toast({
+          title: "Analysis failed",
+          description: job.error?.message ?? `The analysis job ended as ${job.status}. No data was fabricated.`,
+          tone: "danger",
+        });
+      }
+      invalidateAnalysisOutputs();
+    },
+  });
+
+  const mutation = useMutation({
     mutationFn: api.trends.refresh,
     onSuccess: (r) => {
-      toast({ title: "Analysis started", description: `Job ${r.job_id.slice(0, 8)}… — results appear as they finish.`, tone: "info" });
-      return r;
+      doneRef.current = false;
+      setJobId(r.job_id);
+      toast({ title: "Analysis started", description: `Job ${r.job_id.slice(0, 8)}… — progress is tracked until it finishes.`, tone: "info" });
     },
     onError: toastOnError(toast),
     onSettled: () => qc.invalidateQueries({ queryKey: ["trends"] }),
   });
+
+  return {
+    ...mutation,
+    /** Latest polled job (null when idle). */
+    analysisJob: poll.job,
+    /** queued | running | succeeded | failed | cancelled | dead_letter | idle */
+    analysisStatus: poll.status,
+    /** True while a job is in flight — callers should disable re-triggering. */
+    isAnalysisRunning: poll.isPolling || mutation.isPending,
+  };
 }
 
 // ---------------------------------------------------------------- Categories

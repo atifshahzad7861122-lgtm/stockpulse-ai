@@ -24,6 +24,8 @@ class SourceHealthOut(BaseModel):
 
     id: str
     trend_source_id: str
+    source_name: str | None = None
+    source_type: str | None = None
     status: SourceStatus
     last_success_at: datetime | None = None
     last_failure_at: datetime | None = None

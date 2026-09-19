@@ -50,6 +50,7 @@ export function isLiveHealth(h: SourceHealth | SourceSummary | null | undefined)
 }
 
 const STATUS_TONE: Record<SourceStatus, "success" | "info" | "warning" | "muted" | "danger"> = {
+  NOT_CHECKED: "muted",
   AVAILABLE: "success",
   CONFIGURED: "info",
   NEEDS_AUTH: "warning",
@@ -59,6 +60,8 @@ const STATUS_TONE: Record<SourceStatus, "success" | "info" | "warning" | "muted"
 
 export function sourceStatusLabel(status: SourceStatus | string | null | undefined): string {
   switch (status) {
+    case "NOT_CHECKED":
+      return "Not checked";
     case "AVAILABLE":
       return "Available";
     case "CONFIGURED":

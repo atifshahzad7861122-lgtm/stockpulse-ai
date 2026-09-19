@@ -33,7 +33,6 @@ import {
   useTrendSignals,
   useTrends,
 } from "../../hooks/useApi";
-import { useJobPoll } from "../../hooks/useJobPoll";
 import { useToast } from "../../components/toast";
 import { enumLabel, fmtDate, fmtDateTime, timeAgo } from "../../lib/format";
 import type { Trend, TrendSignal } from "../../types";
@@ -57,8 +56,8 @@ function TrendsPage() {
   const categories = useCategories();
   const trends = useTrends({ window, category: category || undefined, min_score: minScore || undefined, sort: "-score", page_size: 24 });
   const refresh = useRefreshTrends();
-  const [pollId, setPollId] = useState<string | null>(null);
-  const poll = useJobPoll(pollId, { onDone: () => setPollId(null) });
+  const running = refresh.isAnalysisRunning;
+  const pct = refresh.analysisJob ? Math.round((refresh.analysisJob.progress ?? 0) * 100) : 0;
 
   const setParam = (k: string, v: string) => {
     const p = new URLSearchParams(params.toString());
@@ -77,11 +76,12 @@ function TrendsPage() {
             size="sm"
             variant="primary"
             icon={<RefreshCw size={13} />}
-            loading={refresh.isPending || poll.isPolling}
-            onClick={() => refresh.mutate(undefined, { onSuccess: (r) => setPollId(r.job_id) })}
+            loading={refresh.isPending || running}
+            disabled={running}
+            onClick={() => refresh.mutate()}
             title="Trigger on-demand aggregation (rate-limited: 5/hr)"
           >
-            {poll.isPolling ? "Aggregating…" : "Refresh trends"}
+            {running ? `Aggregating… ${pct}%` : "Refresh trends"}
           </Button>
         }
       />

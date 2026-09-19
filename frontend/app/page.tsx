@@ -150,10 +150,24 @@ function HeroRow({ opp, rank }: { opp: Opportunity; rank: number }) {
 
 function RunAnalysisButton() {
   const run = useRefreshTrends();
+  const running = run.isAnalysisRunning;
+  const pct = run.analysisJob ? Math.round((run.analysisJob.progress ?? 0) * 100) : 0;
   return (
-    <Button size="sm" variant="primary" icon={<Play size={13} />} loading={run.isPending} onClick={() => run.mutate()}>
-      Run daily analysis
-    </Button>
+    <span className="inline-flex items-center gap-2">
+      <Button
+        size="sm"
+        variant="primary"
+        icon={<Play size={13} />}
+        loading={run.isPending || running}
+        disabled={running}
+        onClick={() => run.mutate()}
+      >
+        {running ? `Analyzing… ${pct}%` : "Run daily analysis"}
+      </Button>
+      {run.analysisStatus !== "idle" && !running && run.analysisJob?.status === "failed" && (
+        <span className="text-xs text-status-danger">Last run failed — see Agents for details.</span>
+      )}
+    </span>
   );
 }
 

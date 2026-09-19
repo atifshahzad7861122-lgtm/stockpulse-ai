@@ -28,6 +28,7 @@ class DataProvenance(StrEnum):
 class SourceStatus(StrEnum):
     """Phase 2 source health (PHASE2_DESIGN.md §1; API §5 exposes identically)."""
 
+    NOT_CHECKED = "NOT_CHECKED"
     AVAILABLE = "AVAILABLE"
     CONFIGURED = "CONFIGURED"
     NEEDS_AUTH = "NEEDS_AUTH"
@@ -277,9 +278,11 @@ class SourceStatus(StrEnum):
 
     AVAILABLE — healthy, returning real data · CONFIGURED — credentials set,
     not yet verified · NEEDS_AUTH — needs user credentials/config ·
-    UNAVAILABLE — cannot run in this environment · TEMP_FAILING — transient failure.
+    UNAVAILABLE — cannot run in this environment · TEMP_FAILING — transient failure ·
+    NOT_CHECKED — registered but the scheduler has never checked it.
     """
 
+    NOT_CHECKED = "NOT_CHECKED"
     AVAILABLE = "AVAILABLE"
     CONFIGURED = "CONFIGURED"
     NEEDS_AUTH = "NEEDS_AUTH"

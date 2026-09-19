@@ -718,10 +718,11 @@ export interface HealthResponse {
 
 /**
  * SourceStatus — mirrors backend `SourceStatus(str, Enum)` EXACTLY:
- * AVAILABLE · CONFIGURED · NEEDS_AUTH · UNAVAILABLE · TEMP_FAILING
+ * NOT_CHECKED · AVAILABLE · CONFIGURED · NEEDS_AUTH · UNAVAILABLE · TEMP_FAILING
  * (PHASE2_DESIGN.md §1, §12 contract). UPPER_SNAKE_CASE everywhere.
  */
 export type SourceStatus =
+  | "NOT_CHECKED"
   | "AVAILABLE"
   | "CONFIGURED"
   | "NEEDS_AUTH"

@@ -220,10 +220,13 @@ def list_checks(
     result: Annotated[str | None, Query(pattern="^(PASS|REVIEW|HIGH_RISK)$")] = None,
     subject_kind: Annotated[str | None, Query()] = None,
     subject_id: str | None = None,
+    pending_review: bool = False,
 ):
     q = db.query(ComplianceCheck).order_by(ComplianceCheck.created_at.desc())
     if result:
         q = q.filter_by(result=result)
+    if pending_review:
+        q = q.filter(ComplianceCheck.reviewed_at.is_(None))
     if subject_kind and subject_id and subject_kind in _SUBJECT_KIND_TO_COLUMN:
         q = q.filter(
             getattr(ComplianceCheck, _SUBJECT_KIND_TO_COLUMN[subject_kind][0]) == subject_id

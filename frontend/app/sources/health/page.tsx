@@ -37,6 +37,8 @@ export default function SourceHealthPage() {
   const collect = useCollectSource();
 
   const rows = useMemo(() => health.data ?? [], [health.data]);
+  const checked = useMemo(() => rows.filter((h) => h.checked_at).length, [rows]);
+  const notChecked = rows.length - checked;
 
   const columns: Column<SourceHealth>[] = [
     {
@@ -144,21 +146,32 @@ export default function SourceHealthPage() {
       <PageHeader
         title="Source Health"
         description="Runtime health of every data source adapter. Failing sources are marked with their last success and error — confidence is lowered downstream, never padded with invented data."
-        badge={<Badge tone="info">{rows.length} sources</Badge>}
+        badge={
+          <Badge tone="info">
+            {rows.length} total · {checked} checked · {notChecked} not checked
+          </Badge>
+        }
         actions={
           <Link href="/sources">
             <Button size="sm" variant="outline">All sources</Button>
           </Link>
         }
       />
+      {notChecked > 0 && (
+        <div className="mb-4 rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary">
+          <span className="font-semibold text-text-primary">{notChecked} of {rows.length} sources</span>{" "}
+          have never been health-checked. The backend scheduler runs checks every 15 minutes; until then
+          these adapters show <span className="font-medium">Not checked</span> instead of a fabricated status.
+        </div>
+      )}
       <QueryView
         query={health}
         loading={<Skeleton lines={8} />}
         empty={
           <EmptyState
             icon={<Activity size={18} />}
-            title="No health records yet"
-            description="Health rows appear once the Phase-2 backend runs its first 15-minute source health check."
+            title="No sources registered"
+            description="Register a source adapter first — health entries appear here once sources exist."
           />
         }
         errorTitle="Health data unavailable"
