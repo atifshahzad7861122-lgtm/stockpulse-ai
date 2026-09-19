@@ -1,2 +1,0 @@
-# Keeps frontend/public/ in git so the Dockerfile's COPY ./public step never
-# fails on a fresh clone (Next.js builds fine with an empty public dir).
