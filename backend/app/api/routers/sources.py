@@ -3,9 +3,11 @@
 ``GET /`` lists every TrendSource with its health summary. ``POST /{id}/collect``
 queues a manual collection (rate-limited like /trends/refresh → 202 + run id).
 
-The Phase-2 source models (``app.models.sources``) and the adapter registry are
-created by sibling agents; until they land, health/runs degrade to honest
-empty states and collect records SKIPPED (never fake data).
+The Phase-2 source models (``app.models.sources``) and the adapter registry
+resolve every TrendSource to its adapter through
+``app.adapters.registry.adapter_type_for_source`` (source name → adapter
+source_type); unmapped sources still record honest SKIPPED runs (never fake
+data).
 """
 
 from __future__ import annotations
@@ -303,6 +305,7 @@ def _collect_via_adapter(
         return {
             "status": CollectionRunStatus.SKIPPED,
             "error": f"Source {health.status.value}: {health.detail}",
+            "probed_status": health.status.value,
         }
 
     try:
@@ -358,21 +361,32 @@ def _finalize_run(db: Session, run_id: str | None, result: dict, started: dateti
                 .filter_by(trend_source_id=run.trend_source_id)
                 .one_or_none()
             )
-            if health is not None:
-                health.checked_at = now
-                if ok:
-                    health.last_success_at = now
-                    health.consecutive_failures = 0
-                    health.records_collected = (
-                        getattr(health, "records_collected", 0) or 0
-                    ) + run.records_collected
-                else:
-                    health.last_failure_at = now
-                    health.last_error = run.error
-                    health.consecutive_failures = (
-                        getattr(health, "consecutive_failures", 0) or 0
-                    ) + 1
-                db.commit()
+            if health is None:
+                # First-ever run for this source: create the row (the scheduler
+                # path does the same) so health reflects the API collect too.
+                health = SourceHealth(trend_source_id=run.trend_source_id)
+                db.add(health)
+            health.checked_at = now
+            probed = result.get("probed_status")
+            if probed in ("NEEDS_AUTH", "UNAVAILABLE"):
+                # Honest skip: record the adapter's probed state (mirrors the
+                # scheduler path) instead of the model's UNAVAILABLE default.
+                health.status = SourceStatus(probed)
+            if ok:
+                health.status = SourceStatus.AVAILABLE
+                health.last_success_at = now
+                health.consecutive_failures = 0
+                health.last_error = None
+                health.records_collected = (
+                    getattr(health, "records_collected", 0) or 0
+                ) + run.records_collected
+            else:
+                health.last_failure_at = now
+                health.last_error = run.error
+                health.consecutive_failures = (
+                    getattr(health, "consecutive_failures", 0) or 0
+                ) + 1
+            db.commit()
     except Exception as exc:  # noqa: BLE001 — bookkeeping must not fail the job
         logger.warning("collection bookkeeping failed: %s", exc)
         db.rollback()
@@ -402,10 +416,17 @@ def collect_source(
         db.refresh(run)
         run_id = run.id
 
+    # Resolve the adapter through the shared name → adapter-type map.
+    # The TrendSource.source_type column holds the coarse TrendSourceType enum
+    # (e.g. "marketplace_feed"), which never matches an adapter registry key —
+    # passing it straight to get_adapter() SKIPPED every manual collect.
+    from app.adapters.registry import adapter_type_for_source
+
     source_type = str(getattr(source.source_type, "value", source.source_type))
+    adapter_type = adapter_type_for_source(source.name) or source_type
 
     def _run(job_db: Session, agent_run):  # noqa: ARG001 — jobs pattern signature
-        return _execute_collection(source_id, run_id, source_type)
+        return _execute_collection(source_id, run_id, adapter_type)
 
     result = jobs.submit_job(
         agent_name="trend_research",

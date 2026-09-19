@@ -45,6 +45,31 @@ def _load_adapters() -> dict[str, type[SourceAdapter]]:
 
 ADAPTERS: dict[str, type[SourceAdapter]] = _load_adapters()
 
+# Phase-2 source name → adapter ``source_type``.
+#
+# TrendSource rows carry the coarse ``TrendSourceType`` enum (e.g.
+# "marketplace_feed") in their ``source_type`` column, while the adapter
+# registry is keyed by the fine-grained adapter type (e.g. "rss",
+# "github_trending"). Both the scheduler AND the API ``/{id}/collect``
+# endpoint must resolve through this map — passing the enum value straight to
+# ``get_adapter()`` returns None for every seeded source and every manual
+# collect ends SKIPPED with "No adapter registered ...".
+ADAPTER_TYPE_BY_SOURCE_NAME: dict[str, str] = {
+    "RSS feeds (blogs + photography press)": "rss",
+    "ScrapeGraphAI web discovery": "scrapegraph_web",
+    "Agent-Reach web channels": "agentreach_web",
+    "V2EX hot topics": "v2ex",
+    "Xueqiu hot stocks": "xueqiu",
+    "YouTube channel RSS": "youtube_rss",
+    "GitHub trending AI repos": "github_trending",
+    "Adobe Contributor dashboard (private)": "adobe_contributor",
+}
+
+
+def adapter_type_for_source(source_name: str | None) -> str | None:
+    """Return the adapter ``source_type`` for a TrendSource name (or None)."""
+    return ADAPTER_TYPE_BY_SOURCE_NAME.get((source_name or "").strip())
+
 
 def get_adapter(source_type: str) -> type[SourceAdapter] | None:
     """Return the adapter class for ``source_type`` (or None if unknown)."""
@@ -55,4 +80,10 @@ def get_all_adapter_types() -> list[str]:
     return sorted(ADAPTERS.keys())
 
 
-__all__ = ["ADAPTERS", "get_adapter", "get_all_adapter_types"]
+__all__ = [
+    "ADAPTERS",
+    "ADAPTER_TYPE_BY_SOURCE_NAME",
+    "adapter_type_for_source",
+    "get_adapter",
+    "get_all_adapter_types",
+]

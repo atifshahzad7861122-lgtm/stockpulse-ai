@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.adapters.base import CollectionContext
-from app.adapters.registry import get_adapter
+from app.adapters.registry import ADAPTER_TYPE_BY_SOURCE_NAME, get_adapter
 from app.schemas.enums import SourceStatus
 
 logger = logging.getLogger(__name__)
@@ -181,16 +181,7 @@ def _sources_by_types(session: Session, source_types: tuple[str, ...]) -> list:
     return session.query(TrendSource).filter(TrendSource.name.in_(_source_names(source_types))).all()
 
 
-_SOURCE_TYPE_BY_NAME = {
-    "RSS feeds (blogs + photography press)": "rss",
-    "ScrapeGraphAI web discovery": "scrapegraph_web",
-    "Agent-Reach web channels": "agentreach_web",
-    "V2EX hot topics": "v2ex",
-    "Xueqiu hot stocks": "xueqiu",
-    "YouTube channel RSS": "youtube_rss",
-    "GitHub trending AI repos": "github_trending",
-    "Adobe Contributor dashboard (private)": "adobe_contributor",
-}
+_SOURCE_TYPE_BY_NAME = ADAPTER_TYPE_BY_SOURCE_NAME  # single source of truth
 
 
 def _source_names(source_types: tuple[str, ...]) -> list[str]:

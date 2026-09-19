@@ -79,9 +79,9 @@ def _to_item(db: Session, snapshot: TrendSnapshot, window: str = "7d") -> TrendI
         mock=provenance == DataProvenance.MOCK,
         categories=_categories_for(db, topic),
         signal_count=(
-            db.query(TrendSignal).filter(TrendSignal.signal_name.contains(topic[:20])).count()
-            if topic != "unknown"
-            else 0
+            db.query(TrendSignal)
+            .filter(TrendSignal.trend_snapshot_id == snapshot.id)
+            .count()
         ),
         created_at=snapshot.created_at,
         updated_at=snapshot.created_at,

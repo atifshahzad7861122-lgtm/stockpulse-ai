@@ -10,6 +10,8 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -47,10 +49,17 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     stop_scheduler()
 
 
+# C2 hardening: never expose interactive docs or the OpenAPI schema in
+# production. Dev/test keep them (local dev + contract verification).
+_is_production = settings.app_env == "production"
+
 app = FastAPI(
     title="StockPulse AI",
     description="Personal Adobe Stock intelligence — single-user. See CONTRACT.md.",
     version="0.5.0",
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
     lifespan=lifespan,
 )
 
@@ -71,6 +80,45 @@ async def request_id_middleware(request: Request, call_next):
 
 # Typed API errors → CONTRACT error envelope.
 app.add_exception_handler(APIError, api_error_handler)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Wrap FastAPI 422s in the CONTRACT error envelope.
+
+    Raw {"detail": [...]} shapes bypassed the envelope; clients only know how
+    to parse {"error": {...}}. Explicit 422s raised via APIError (e.g. queue
+    page_size, ILLEGAL_TRANSITION) are unaffected — they never reach this
+    handler. Code follows the registry in app/core/errors.py (E-VAL-801).
+    """
+    raw_errors = jsonable_encoder(exc.errors())  # never leaks non-JSON ctx values
+    field_errors = [
+        {
+            "field": ".".join(str(part) for part in err.get("loc", [])),
+            "message": err.get("msg", ""),
+            "type": err.get("type", ""),
+        }
+        for err in raw_errors
+        if isinstance(err, dict)
+    ]
+    if field_errors:
+        first = field_errors[0]
+        message = f"Invalid request: {first['field']}: {first['message']}".rstrip(": ")
+    else:
+        message = "Invalid request."
+    return error_response(
+        code="E-VAL-801",
+        message=message,
+        status_code=422,
+        request=request,
+        severity="warning",
+        retryable=False,
+        details={"errors": field_errors},
+    )
+
+
 
 
 @app.exception_handler(Exception)
