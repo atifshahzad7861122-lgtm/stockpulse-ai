@@ -34,7 +34,7 @@ import {
   useTrends,
 } from "../../hooks/useApi";
 import { useToast } from "../../components/toast";
-import { enumLabel, fmtDate, fmtDateTime, timeAgo } from "../../lib/format";
+import { fmtDate, fmtDateTime, timeAgo } from "../../lib/format";
 import type { Trend, TrendSignal } from "../../types";
 
 const WINDOWS = [
@@ -206,10 +206,10 @@ function buildSeries(signals: TrendSignal[]) {
   // Group signal values by day; compute current-7d, previous-7d, and baseline series.
   const byDay = new Map<string, number[]>();
   for (const s of signals) {
-    if (s.value === undefined || s.value === null) continue;
+    if (s.metric_value === undefined || s.metric_value === null) continue;
     const day = new Date(s.observed_at).toISOString().slice(0, 10);
     const arr = byDay.get(day) ?? [];
-    arr.push(s.value);
+    arr.push(s.metric_value);
     byDay.set(day, arr);
   }
   const days = Array.from(byDay.entries()).sort(([a]: [string, number[]], [b]: [string, number[]]) => (a < b ? -1 : 1));
@@ -348,15 +348,20 @@ function TrendDetailBody({ trend, signals, signalsLoading }: { trend: NonNullabl
           <EmptyState compact title="No raw signals" description="Signal-level evidence has not been exposed for this trend yet." />
         ) : (
           <ul className="space-y-2">
-            {signals.slice(0, 12).map((s) => (
-              <li key={s.id} className="rounded-md border border-border bg-bg-secondary p-2.5 text-[12.5px]">
+            {signals.slice(0, 12).map((s, i) => (
+              <li key={`${s.signal_name}-${i}`} className="rounded-md border border-border bg-bg-secondary p-2.5 text-[12.5px]">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge tone="neutral">{enumLabel(s.source_type)}</Badge>
-                  {s.source_label && <span className="text-text-secondary">{s.source_label}</span>}
+                  {s.source_name && <Badge tone="neutral">{s.source_name}</Badge>}
+                  <span className="font-medium text-text-primary">{s.signal_name}</span>
                   <span className="ml-auto text-[11px] text-text-muted">{fmtDate(s.observed_at)}</span>
                   {isMock(s) ? <ProvenanceBadge mock /> : <ProvenanceBadge provenance={s.provenance} />}
                 </div>
-                {(s.note || s.metric) && <p className="mt-1 text-text-secondary">{s.note ?? s.metric}{s.value !== undefined && s.value !== null ? ` — ${s.value}` : ""}</p>}
+                {(s.metric_name || s.metric_value !== undefined && s.metric_value !== null) && (
+                  <p className="mt-1 text-text-secondary">
+                    {s.metric_name}{s.metric_value !== undefined && s.metric_value !== null ? `: ${s.metric_value}${s.metric_unit ? ` ${s.metric_unit}` : ""}` : ""}
+                    {s.confidence !== undefined && s.confidence !== null ? <span className="text-text-muted"> · conf {Math.round(s.confidence * 100)}%</span> : null}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

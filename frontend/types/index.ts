@@ -185,14 +185,15 @@ export interface Trend extends WithProvenance {
   updated_at: string;
 }
 
+/** Raw signal row as returned by GET /trends/{id} and /trends/{id}/signals
+ *  (backend SignalBreakdown contract — signal_name/metric_* shape). */
 export interface TrendSignal extends WithProvenance {
-  id: string;
-  trend_id: string;
-  source_type: TrendSourceType;
-  source_label?: string;
-  metric?: string;
-  value?: number;
-  note?: string;
+  signal_name: string;
+  metric_name?: string | null;
+  metric_value?: number | null;
+  metric_unit?: string | null;
+  source_name?: string | null;
+  confidence?: number | null;
   observed_at: string;
 }
 

@@ -19,7 +19,7 @@ from app.api.deps import (
 )
 from app.engines.scoring import norm100, trend_score
 from app.engines.trends import keyword_momentum, search_growth, trend_velocity
-from app.models.intelligence import TrendSignal, TrendSnapshot
+from app.models.intelligence import TrendSignal, TrendSnapshot, TrendSource
 from app.models.taxonomy import Category, MicroNiche, Subcategory
 from app.schemas.agents import JobCreate
 from app.schemas.common import Page
@@ -140,6 +140,8 @@ def trend_detail(trend_id: str, db: Annotated[Session, Depends(get_db)]):
     signals = (
         signals_q.order_by(TrendSignal.observed_at.desc()).limit(20).all() if topic else []
     )
+    source = db.query(TrendSource).filter_by(id=snapshot.trend_source_id).one_or_none()
+    source_name = source.name if source is not None else None
     return TrendDetail(
         **item.model_dump(),
         signals=[
@@ -148,6 +150,7 @@ def trend_detail(trend_id: str, db: Annotated[Session, Depends(get_db)]):
                 metric_name=s.metric_name,
                 metric_value=float(s.metric_value) if s.metric_value is not None else None,
                 metric_unit=s.metric_unit,
+                source_name=source_name,
                 provenance=s.data_provenance,
                 mock=s.data_provenance == DataProvenance.MOCK,
                 confidence=float(s.confidence) if s.confidence is not None else None,

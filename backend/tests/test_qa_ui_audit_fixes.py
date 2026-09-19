@@ -256,3 +256,49 @@ def test_trend_detail_signals_match_list_count(client, db):
     r_signals = client.get(f"/api/trends/{snapshot.id}/signals")
     assert r_signals.status_code == 200, r_signals.text
     assert len(r_signals.json()) == 3
+
+
+def test_trend_detail_signal_breakdown_shape(client, db):
+    """SignalBreakdown must carry the documented contract fields, including
+    source_name — the frontend renders them directly (a missing field caused
+    a client-side crash on the trend detail page)."""
+    from app.models.intelligence import TrendSignal, TrendSnapshot, TrendSource
+    from app.schemas.enums import DataProvenance, TrendSourceType
+
+    src = TrendSource(
+        name="QA Source",
+        source_type=TrendSourceType.MARKETPLACE_FEED,
+        data_provenance=DataProvenance.VERIFIED,
+    )
+    db.add(src)
+    db.flush()
+    snapshot = TrendSnapshot(
+        trend_source_id=src.id,
+        payload={"topic": "QA topic", "provenance": "VERIFIED"},
+        payload_hash="qb" + "0" * 62,
+    )
+    db.add(snapshot)
+    db.flush()
+    db.add(
+        TrendSignal(
+            trend_snapshot_id=snapshot.id,
+            signal_name="qa-owner/qa-repo",
+            metric_name="stars",
+            metric_value=1234,
+            metric_unit="count",
+            data_provenance="VERIFIED",
+            confidence=0.9,
+        )
+    )
+    db.commit()
+
+    r = client.get(f"/api/trends/{snapshot.id}")
+    assert r.status_code == 200, r.text
+    signals = r.json()["signals"]
+    assert len(signals) == 1
+    s = signals[0]
+    assert s["signal_name"] == "qa-owner/qa-repo"
+    assert s["metric_name"] == "stars"
+    assert s["metric_value"] == 1234
+    assert s["source_name"] == "QA Source"
+    assert s["provenance"] == "VERIFIED"
