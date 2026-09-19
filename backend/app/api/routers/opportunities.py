@@ -76,7 +76,10 @@ def list_opportunities(
     micro_niche_id: str | None = None,
     min_score: Annotated[float | None, Query(ge=0, le=100)] = None,
     min_confidence: Annotated[float | None, Query(ge=0, le=1)] = None,
-    sort: Annotated[str, Query(pattern="^(-score|-opportunity_score|created_at)$")] = "-score",
+    sort: Annotated[
+        str,
+        Query(pattern=r"^(-?opportunity_score|-score|created_at|-?priority)$"),
+    ] = "-score",
 ):
     q = db.query(Opportunity)
     if status is not None:
@@ -88,7 +91,15 @@ def list_opportunities(
     if min_confidence is not None:
         q = q.filter(Opportunity.confidence >= min_confidence)
     q = q.order_by(
-        Opportunity.opportunity_score.desc() if sort in ("-score", "-opportunity_score") else Opportunity.created_at.desc()
+        Opportunity.opportunity_score.desc()
+        if sort in ("-score", "-opportunity_score")
+        else Opportunity.opportunity_score.asc()
+        if sort == "opportunity_score"
+        else Opportunity.priority.desc()
+        if sort == "-priority"
+        else Opportunity.priority.asc()
+        if sort == "priority"
+        else Opportunity.created_at.desc()
     )
     # Phase 2: MOCK/demo rows stop driving intelligence unless dev mode is on.
     if not is_dev_mode(db):

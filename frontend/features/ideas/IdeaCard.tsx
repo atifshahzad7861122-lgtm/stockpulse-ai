@@ -237,11 +237,13 @@ function IdeaDrawerBody({ idea, kind }: { idea: Idea; kind: "image" | "video" })
           Edit
         </Button>
         <Button size="sm" variant="outline" icon={<RefreshCw size={12} />} loading={regenerating}
+          disabled={!idea.opportunity_id}
+          title={idea.opportunity_id ? "Queue fresh concept generation for this opportunity" : "Regeneration needs a linked opportunity"}
           onClick={() => {
             setRegenerating(true);
-            muts.generateConcepts.mutate(idea.id, {
+            muts.generateConcepts.mutate(idea.opportunity_id ?? null, {
               onSettled: () => setRegenerating(false),
-              onSuccess: () => toast({ title: "Regeneration queued", description: "New concept versions will appear here.", tone: "info" }),
+              onSuccess: () => toast({ title: "Regeneration queued", description: "Fresh concepts for this opportunity are being generated.", tone: "info" }),
             });
           }}>
           Regenerate

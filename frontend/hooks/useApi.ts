@@ -339,7 +339,8 @@ export function useIdeaMutations() {
       onError: onErr,
     }),
     generateConcepts: useMutation({
-      mutationFn: (id: string) => api.ideas.generateConcepts(id),
+      mutationFn: (opportunityId: string | null) =>
+        api.ideas.generateConcepts(opportunityId ?? undefined),
       onSuccess: (r) => {
         toast({ title: "Ideation started", description: `Job ${r.job_id.slice(0, 8)}…`, tone: "info" });
       },

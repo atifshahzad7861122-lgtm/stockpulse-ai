@@ -922,6 +922,18 @@ export function DataTable<T>({
 // Query-state wrapper: loading / error / empty / data — no blank screens.
 // ---------------------------------------------------------------------------
 
+/** True when `d` is a paginated list envelope (Page<T>) holding zero rows. */
+function isEmptyPageEnvelope(d: unknown): boolean {
+  if (typeof d !== "object" || d === null) return false;
+  const o = d as { data?: unknown; pagination?: unknown };
+  return (
+    Array.isArray(o.data) &&
+    o.data.length === 0 &&
+    typeof o.pagination === "object" &&
+    o.pagination !== null
+  );
+}
+
 export function QueryView<T>({
   query: { data, isLoading, isError, error, refetch, isFetching },
   loading,
@@ -963,7 +975,14 @@ export function QueryView<T>({
       />
     );
   }
-  if (data === undefined || data === null) {
+  // A paginated list envelope with zero rows is "nothing to show": honor the
+  // caller's `empty` view. Only applies when `empty` was provided, so panels
+  // that intentionally render their own empty grids/tables keep working.
+  const dataEmpty =
+    data === undefined ||
+    data === null ||
+    (empty !== undefined && isEmptyPageEnvelope(data));
+  if (dataEmpty) {
     return <>{empty ?? <EmptyState title="No data" />}</>;
   }
   return (

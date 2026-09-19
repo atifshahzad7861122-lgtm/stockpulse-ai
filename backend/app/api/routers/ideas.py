@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.api import jobs
 from app.api.deps import (
+    audit_log,
     bad_request,
+    conflict,
     get_db,
     get_idempotency_key,
     idempotent,
@@ -44,11 +46,19 @@ def _out(kind: IdeaKind, row) -> IdeaOut:
     return data
 
 
-def _get(db: Session, kind: IdeaKind, idea_id: str):
-    row = db.query(_model(kind)).filter_by(id=idea_id).one_or_none()
-    if row is None:
-        raise not_found("IDEA_NOT_FOUND", f"{kind} idea {idea_id} not found.")
-    return row
+def _resolve(db: Session, idea_id: str, kind: IdeaKind | None) -> tuple[IdeaKind, object]:
+    """Resolve an idea by id, optionally constrained to one kind table.
+
+    ``kind`` is a lookup hint, not a security boundary: when omitted, both
+    tables are searched (ids are UUIDs, so a hit is unambiguous). Raises
+    IDEA_NOT_FOUND when neither table has the id.
+    """
+    kinds: tuple[IdeaKind, ...] = (kind,) if kind is not None else ("image", "video")
+    for k in kinds:
+        row = db.query(_model(k)).filter_by(id=idea_id).one_or_none()
+        if row is not None:
+            return k, row
+    raise not_found("IDEA_NOT_FOUND", f"idea {idea_id} not found.")
 
 
 @router.get("", response_model=Page[IdeaOut])
@@ -103,24 +113,27 @@ def create_idea(body: IdeaCreate, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/{idea_id}", response_model=IdeaOut)
 def get_idea(
-    idea_id: str, kind: Annotated[IdeaKind, Query()], db: Annotated[Session, Depends(get_db)]
+    idea_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    kind: Annotated[IdeaKind | None, Query()] = None,
 ):
-    return _out(kind, _get(db, kind, idea_id))
+    k, row = _resolve(db, idea_id, kind)
+    return _out(k, row)
 
 
 @router.patch("/{idea_id}", response_model=IdeaOut)
 def update_idea(
     idea_id: str,
     body: IdeaUpdate,
-    kind: Annotated[IdeaKind, Query()],
     db: Annotated[Session, Depends(get_db)],
+    kind: Annotated[IdeaKind | None, Query()] = None,
 ):
-    row = _get(db, kind, idea_id)
+    k, row = _resolve(db, idea_id, kind)
     for field in ("title", "concept", "originality_notes", "reference_mood", "status"):
         value = getattr(body, field, None)
         if value is not None:
             setattr(row, field, value)
-    if kind == "video":
+    if k == "video":
         if body.duration_target_seconds is not None:
             row.duration_target_seconds = body.duration_target_seconds
         if body.shot_list is not None:
@@ -129,14 +142,16 @@ def update_idea(
         row.priority = body.priority
     db.commit()
     db.refresh(row)
-    return _out(kind, row)
+    return _out(k, row)
 
 
 @router.delete("/{idea_id}", status_code=204)
 def delete_idea(
-    idea_id: str, kind: Annotated[IdeaKind, Query()], db: Annotated[Session, Depends(get_db)]
+    idea_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    kind: Annotated[IdeaKind | None, Query()] = None,
 ):
-    row = _get(db, kind, idea_id)
+    _, row = _resolve(db, idea_id, kind)
     db.delete(row)
     db.commit()
     return None
@@ -144,9 +159,11 @@ def delete_idea(
 
 @router.post("/{idea_id}/promote", response_model=IdeaOut)
 def promote_idea(
-    idea_id: str, kind: Annotated[IdeaKind, Query()], db: Annotated[Session, Depends(get_db)]
+    idea_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    kind: Annotated[IdeaKind | None, Query()] = None,
 ):
-    row = _get(db, kind, idea_id)
+    k, row = _resolve(db, idea_id, kind)
     if row.status not in (IdeaStatus.DRAFT,):
         raise bad_request(
             "INVALID_TRANSITION",
@@ -154,7 +171,27 @@ def promote_idea(
         )
     row.status = IdeaStatus.READY
     db.commit()
-    return _out(kind, row)
+    db.refresh(row)
+    return _out(k, row)
+
+
+@router.post("/{idea_id}/archive", response_model=IdeaOut)
+def archive_idea(
+    idea_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    kind: Annotated[IdeaKind | None, Query()] = None,
+):
+    """Archive an idea (DRAFT/READY/IN_QUEUE -> ARCHIVED). The drawer calls
+    this without a kind hint, so the resolver searches both idea tables."""
+    k, row = _resolve(db, idea_id, kind)
+    if row.status == IdeaStatus.ARCHIVED:
+        raise conflict("ALREADY_ARCHIVED", "Idea is already archived.")
+    row.status = IdeaStatus.ARCHIVED
+    db.commit()
+    db.refresh(row)
+    audit_log(db, action="archive", entity_kind=f"{k}_idea", entity_id=row.id)
+    db.commit()
+    return _out(k, row)
 
 
 @router.post("/generate-concepts", response_model=JobCreate, status_code=202)

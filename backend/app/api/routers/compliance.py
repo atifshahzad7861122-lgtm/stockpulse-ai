@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
@@ -48,6 +48,16 @@ _SUBJECT_KIND_TO_COLUMN = {
     "video_idea": ("video_idea_id",),
     "metadata": ("metadata_id",),
     "production_queue": ("production_queue_id",),
+}
+
+# Reverse lookup: id column -> subject kind. The frontend's ComplianceSubject
+# contract is {kind, id, version_id?}; the serializer below emits that shape.
+_COLUMN_TO_SUBJECT_KIND: dict[str, str] = {
+    column: kind for kind, (column,) in _SUBJECT_KIND_TO_COLUMN.items()
+}
+_SUBJECT_VERSION_COLUMN: dict[str, str] = {
+    "prompt": "prompt_version_id",
+    "asset": "asset_version_id",
 }
 
 
@@ -123,19 +133,28 @@ def _load_subject(db: Session, kind: str, subject_id: str) -> ScreenSubject:
     raise bad_request("UNSUPPORTED_SUBJECT_KIND", f"Unsupported subject kind: {kind}.")
 
 
+def _subject_out(check: ComplianceCheck) -> dict[str, Any]:
+    """Serialize the check subject as {kind, id, version_id?}.
+
+    Matches the frontend's ComplianceSubject contract (types/index.ts).
+    Exactly one subject FK is set per row (enforced at write time); the
+    fallback below is defensive only and cannot occur via the API.
+    """
+    for column, kind in _COLUMN_TO_SUBJECT_KIND.items():
+        subject_id = getattr(check, column, None)
+        if subject_id is not None:
+            subject: dict[str, Any] = {"kind": kind, "id": subject_id}
+            version_column = _SUBJECT_VERSION_COLUMN.get(kind)
+            if version_column:
+                version_id = getattr(check, version_column, None)
+                if version_id is not None:
+                    subject["version_id"] = version_id
+            return subject
+    return {"kind": "prompt", "id": ""}
+
+
 def _out(check: ComplianceCheck) -> ComplianceCheckOut:
-    subject = {
-        k: v
-        for k, v in {
-            "prompt_id": check.prompt_id,
-            "asset_id": check.asset_id,
-            "image_idea_id": check.image_idea_id,
-            "video_idea_id": check.video_idea_id,
-            "metadata_id": check.metadata_id,
-            "production_queue_id": check.production_queue_id,
-        }.items()
-        if v is not None
-    }
+    subject = _subject_out(check)
     return apply_labels(
         ComplianceCheckOut(
             id=check.id,

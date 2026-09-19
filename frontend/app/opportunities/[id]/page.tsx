@@ -4,9 +4,9 @@
  * evidence, formats, image/video concepts, compliance guidance, related
  * opportunities, activity timeline, action buttons.
  */
-import {use, useEffect, useState, Suspense} from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Bookmark, Check, CheckCircle2, Wand2, XCircle, Archive, Lightbulb, Download, FileText } from "lucide-react";
 import {
   Badge,
@@ -62,8 +62,9 @@ import { enumLabel, fmtPct01, timeAgo } from "../../../lib/format";
 import { isActionable } from "../../../features/opportunities/OpportunityCard";
 import type { FusionEvidence, Idea, Opportunity, ProductionRecommendation } from "../../../types";
 
-function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+function OpportunityDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const search = useSearchParams();
   const opp = useOpportunity(id);
@@ -812,10 +813,10 @@ function PromptLinkModal({ idea, onClose }: { idea: Idea | null; onClose: () => 
 // prerender (Next.js missing-suspense-with-csr-bailout).
 // ---------------------------------------------------------------------------
 
-export default function PageWrapper({ params }: { params: Promise<{ id: string }> }) {
+export default function PageWrapper() {
   return (
     <Suspense fallback={<div className="skeleton h-64 rounded" />}>
-      <OpportunityDetailPage {...{ params }} />
+      <OpportunityDetailPage />
     </Suspense>
   );
 }

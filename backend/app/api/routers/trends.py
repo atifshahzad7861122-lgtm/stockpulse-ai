@@ -130,7 +130,10 @@ def trend_detail(trend_id: str, db: Annotated[Session, Depends(get_db)]):
     item = _to_item(db, snapshot)
     payload = snapshot.payload or {}
     topic = payload.get("topic", "")
-    signals_q = db.query(TrendSignal).filter(TrendSignal.signal_name.contains(topic[:20]))
+    # Signals are linked to their snapshot by FK at collect time (see
+    # adapters/store.py); query them the same way _to_item does so the
+    # detail view agrees with the list's signal_count.
+    signals_q = db.query(TrendSignal).filter(TrendSignal.trend_snapshot_id == snapshot.id)
     # Phase 2: MOCK/demo rows stop driving intelligence unless dev mode is on.
     if not is_dev_mode(db):
         signals_q = signals_q.filter(TrendSignal.data_provenance != DataProvenance.MOCK)

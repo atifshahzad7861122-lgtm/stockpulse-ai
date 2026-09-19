@@ -205,7 +205,7 @@ function OpportunitiesPage() {
                 rows={filtered}
                 rowKey={(o) => o.id}
                 sort={sort}
-                onSort={(s) => setSort(s)}
+                onSort={(s) => { setSort(s); setPage(1); }}
                 testId="opportunities-table"
               />
               <Pagination page={page} totalPages={opps.data?.pagination.total_pages ?? 1} onChange={setPage} />

@@ -198,7 +198,11 @@ export const api = {
 
   // §5.3 Categories
   categories: {
-    list: async (): Promise<Category[]> => { const r = await get<Page<Category> | Category[]>(`/categories`); return Array.isArray(r) ? r : r.data; },
+    // Backend returns the standard Page envelope {data, pagination}; unwrap to Category[].
+    list: async (): Promise<Category[]> => {
+      const r = await get<Page<Category> | Category[]>(`/categories`);
+      return Array.isArray(r) ? r : r.data;
+    },
     detail: (id: string) => get<Category>(`/categories/${id}`),
   },
 
@@ -236,7 +240,12 @@ export const api = {
       shot_list?: { shot: string; camera_move?: string; duration_s?: number; notes?: string }[];
     }) => post<Idea>("/ideas", body),
     update: (id: string, body: Partial<Idea>) => patch<Idea>(`/ideas/${id}`, body),
-    generateConcepts: (id: string) => post<JobAccepted>(`/ideas/${id}/generate-concepts`, {}, true),
+    generateConcepts: (opportunity_id?: string | null) =>
+      post<JobAccepted>(
+        `/ideas/generate-concepts${opportunity_id ? `?opportunity_id=${encodeURIComponent(opportunity_id)}` : ""}`,
+        {},
+        true,
+      ),
     archive: (id: string) => post<Idea>(`/ideas/${id}/archive`, {}),
   },
 
@@ -382,7 +391,7 @@ export const api = {
       get<Record<string, unknown>>(`/analytics/opportunities/${id}/performance`),
     ingestEvents: (events: { name: string; entity_id?: string; route?: string; at?: string }[]) =>
       post<{ accepted: number }>("/analytics/events", { events }),
-        exports: async (): Promise<AnalyticsExport[]> => {
+QQQ
       // Backend returns the standard Page envelope {data, pagination}; unwrap.
       const r = await get<Page<AnalyticsExport> | AnalyticsExport[]>("/analytics/exports");
       return Array.isArray(r) ? r : r.data;
