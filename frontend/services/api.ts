@@ -391,7 +391,7 @@ export const api = {
       get<Record<string, unknown>>(`/analytics/opportunities/${id}/performance`),
     ingestEvents: (events: { name: string; entity_id?: string; route?: string; at?: string }[]) =>
       post<{ accepted: number }>("/analytics/events", { events }),
-QQQ
+  exports: async (): Promise<AnalyticsExport[]> => {
       // Backend returns the standard Page envelope {data, pagination}; unwrap.
       const r = await get<Page<AnalyticsExport> | AnalyticsExport[]>("/analytics/exports");
       return Array.isArray(r) ? r : r.data;
