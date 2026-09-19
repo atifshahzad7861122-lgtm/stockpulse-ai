@@ -1,18 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Same-origin API proxy: the browser calls /api/* on this origin and
-  // Next.js forwards to the FastAPI backend. This keeps the production build
-  // working behind any public tunnel/host without a hardcoded backend URL.
-  // Note: rewrites only apply when no page or route handler matches, so the
-  // frontend's own /api/renders/* routes keep working.
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
-      },
-    ];
-  },
+  // NOTE: no /api rewrites here. The browser client calls the backend
+  // directly through NEXT_PUBLIC_API_URL (an absolute URL baked in at build
+  // time), and the /api/renders/* routes are local Next.js route handlers
+  // (they take precedence over rewrites anyway).
+  //
+  // A same-origin proxy to 127.0.0.1:8000 would break on Railway, where the
+  // backend is a SEPARATE service — the frontend container has nothing
+  // listening on 127.0.0.1:8000. Keep production free of localhost backends.
 };
 
 module.exports = nextConfig;
