@@ -10,7 +10,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import { api, ApiClientError, type ListParams } from "../services/api";
+import { api, ApiClientError, errorMessage, type ListParams } from "../services/api";
 import { qk } from "../services/queryKeys";
 import type {
   AdobeConnection,
@@ -86,8 +86,8 @@ const REF = { staleTime: 24 * 60 * 60_000, gcTime: 7 * 24 * 60 * 60_000 };
 const ANALYTICS_Q = { staleTime: 10 * 60_000, gcTime: 60 * 60_000 };
 
 function toastOnError(toast: ReturnType<typeof useToast>["toast"]) {
-  return (err: ApiClientError) => {
-    toast({ title: "Request failed", description: err.envelope.message, tone: "danger" });
+  return (err: unknown) => {
+    toast({ title: "Request failed", description: errorMessage(err), tone: "danger" });
   };
 }
 
@@ -591,14 +591,20 @@ export function useQueueMutations() {
         toast({ title: "Queue updated", description: `Moved to ${v.to.replace(/_/g, " ").toLowerCase()}.`, tone: "success" });
         inv(v.id);
       },
-      onError: (err: ApiClientError, v) => {
+      onError: (err: unknown, v) => {
         // Surface the contract's allowed-list hint from INVALID_TRANSITION details.
-        const allowed = (err.envelope.details?.allowed as string[] | undefined) ?? [];
+        const envelope = (err as { envelope?: unknown } | null | undefined)?.envelope as
+          | { details?: unknown; message?: unknown }
+          | undefined;
+        const allowedRaw = (envelope?.details as { allowed?: unknown } | undefined)?.allowed;
+        const allowed = Array.isArray(allowedRaw)
+          ? allowedRaw.filter((x): x is string => typeof x === "string")
+          : [];
         toast({
           title: "Transition not allowed",
           description: allowed.length
             ? `Allowed from here: ${allowed.join(", ")}.`
-            : err.envelope.message,
+            : errorMessage(err),
           tone: "danger",
         });
         inv(v.id);
