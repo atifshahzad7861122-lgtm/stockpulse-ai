@@ -19,6 +19,9 @@ COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
+# Render queue spawns the Remotion CLI against remotion/index.tsx at runtime
+# (frontend/lib/renders/queue.ts), so the compositions source must ship too.
+COPY --from=builder /app/remotion ./remotion
 
 EXPOSE 3000
 # $PORT is injected by Render/Heroku-style hosts; defaults to 3000.
