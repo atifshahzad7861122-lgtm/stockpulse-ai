@@ -20,6 +20,7 @@ import {
 } from "../../components/ui";
 import { useToast } from "../../components/toast";
 import { useSettings, useSettingsMutations } from "../../hooks/useApi";
+import { errorMessage } from "../../services/api";
 
 type SettingsMap = Record<string, unknown>;
 
@@ -65,7 +66,7 @@ function useSettingFields() {
     for (const k of keys) patch[k] = draft[k];
     muts.mutate(patch, {
       onSuccess: () => toast({ title: "Settings saved", tone: "success" }),
-      onError: (e) => toast({ title: "Save failed", description: e.message, tone: "danger" }),
+      onError: (e) => toast({ title: "Save failed", description: errorMessage(e), tone: "danger" }),
     });
   };
 
