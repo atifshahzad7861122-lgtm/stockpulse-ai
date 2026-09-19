@@ -277,7 +277,7 @@ function ExportsPanel() {
         errorTitle="Exports unavailable">
         {(exportsList) => (
           <ul className="space-y-2">
-            {(exportsList?.data ?? exportsList?.items ?? []).map((e) => (
+            {exportsList.map((e) => (
               <li key={e.id} className="flex items-center gap-3 rounded-md border border-border bg-bg-secondary px-3 py-2.5 text-[13px]">
                 <span className="min-w-0 flex-1 text-text-secondary">
                   <span className="font-medium text-text-primary">{e.kind}</span> · requested {timeAgo(e.created_at)}
