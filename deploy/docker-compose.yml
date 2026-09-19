@@ -1,0 +1,54 @@
+# StockPulse AI — full stack on one machine (Docker Compose)
+# Usage:  docker compose -f deploy/docker-compose.yml up -d --build
+# Then open http://localhost:3000 (frontend) — it talks to the backend
+# in your browser via NEXT_PUBLIC_API_URL=http://localhost:8000/api.
+name: stockpulse
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stockpulse
+      POSTGRES_PASSWORD: stockpulse
+      POSTGRES_DB: stockpulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpulse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://stockpulse:stockpulse@db:5432/stockpulse
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      STOCKPULSE_DEV_MODE: "false"
+      DEV_MODE: "false"
+      STOCKPULSE_SCHEDULER_ENABLED: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

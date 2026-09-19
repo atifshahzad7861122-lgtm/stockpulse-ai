@@ -1,0 +1,41 @@
+{
+  "name": "stockpulse-ai-web",
+  "version": "0.2.0",
+  "private": true,
+  "description": "StockPulse AI — personal Adobe Stock intelligence web app (single-user)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "remotion:browser": "remotion browser ensure"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^8.18.0",
+    "@remotion/cli": "4.0.526",
+    "@remotion/player": "4.0.526",
+    "@tanstack/react-query": "^5.103.1",
+    "framer-motion": "^13.4.0",
+    "lucide-react": "^1.47.0",
+    "next": "14.2.18",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^3.10.1",
+    "remotion": "4.0.526",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@types/three": "^0.186.0",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.18",
+    "postcss": "8.4.49",
+    "prettier": "3.3.3",
+    "tailwindcss": "3.4.15",
+    "typescript": "5.6.3"
+  }
+}

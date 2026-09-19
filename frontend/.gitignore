@@ -1,0 +1,3 @@
+# Local Remotion render state (job records, props, rendered MP4s).
+# Rebuilt on demand via the "Render video" buttons; never commit renders.
+remotion/.queue/

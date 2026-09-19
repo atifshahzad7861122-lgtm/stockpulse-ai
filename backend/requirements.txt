@@ -1,0 +1,23 @@
+# StockPulse AI — backend dependencies (pinned).
+# Python 3.12. Local dev uses SQLite via SQLAlchemy (see README);
+# dependency versions are Postgres-compatible for a later switch.
+fastapi==0.118.0
+uvicorn[standard]==0.34.3
+sqlalchemy==2.0.36
+pydantic==2.10.6
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+python-multipart==0.0.20
+httpx==0.28.1
+# Phase 2 real-data integration (guarded imports — app boots without them)
+feedparser==6.0.14
+apscheduler==3.11.3
+rich==15.0.0  # required by agent-reach doctor/health module
+# agent-reach 1.5.0 is installed from /tmp/agent-reach (PyPI serves 0.1.0,
+# which lacks the channel APIs); scrapegraphai is large/optional.
+# Their adapters degrade to UNAVAILABLE with a reason if the libs are missing.
+# Dev / lint / test
+ruff==0.8.4
+black==24.10.0
+pytest==8.3.4
+pytest-asyncio==0.25.0

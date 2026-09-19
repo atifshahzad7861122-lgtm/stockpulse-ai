@@ -1,0 +1,138 @@
+/*
+ * StockPulse AI design tokens — precision-instrument system (2026-09-19).
+ * Dark luxurious base, champagne-gold single accent, F1 racing red reserved
+ * strictly for alerts / live states / critical warnings. Serif display
+ * (Bodoni Moda) for hero moments only; Inter everywhere else.
+ */
+:root {
+  /* Backgrounds & surfaces — near-black, warm-neutral */
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #0d0d10;
+  --surface-base: #141417;
+  --surface-elevated: #1b1b20;
+
+  /* Text — warm off-white scale */
+  --text-primary: #f5f3ee;
+  --text-secondary: #a9a49a;
+  --text-muted: #6f6a60;
+
+  /* The one accent: champagne gold */
+  --accent-primary: #d6b25e;
+  --accent-secondary: #e9ce8f;
+
+  /* Status — semantic only. Racing red is alerts/live/critical, never decoration. */
+  --status-success: #34d399;
+  --status-warning: #f5a524;
+  --status-danger: #e10600;
+  --status-info: #9a958a;
+
+  /* Hairline borders */
+  --border-default: #242428;
+  --border-strong: #35353b;
+
+  /* Typography — next/font injects --font-inter/--font-bodoni on <html>;
+     --font-display is the hero/display stack built from Bodoni. */
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-bodoni), "Bodoni Moda", Georgia, serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums; /* telemetry: numbers must not jitter */
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  color: var(--text-primary);
+}
+
+/* Focus ring — champagne gold 2px, always visible */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Status chips: ~14% tint background, full-color text. Always text + color. */
+.chip-success { background: color-mix(in srgb, var(--status-success) 13%, transparent); color: var(--status-success); }
+.chip-warning { background: color-mix(in srgb, var(--status-warning) 14%, transparent); color: var(--status-warning); }
+.chip-danger  { background: color-mix(in srgb, var(--status-danger) 16%, transparent); color: #ff5a4d; }
+.chip-info    { background: color-mix(in srgb, var(--status-info) 16%, transparent);    color: #c9c4b8; }
+.chip-accent  { background: color-mix(in srgb, var(--accent-primary) 15%, transparent); color: var(--accent-secondary); }
+
+/* Physical depth for surfaces — soft inset top-light + deep soft shadow. */
+.depth-1 { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.5), 0 12px 32px -16px rgba(0,0,0,0.8); }
+.depth-2 { box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 4px rgba(0,0,0,0.5), 0 24px 64px -24px rgba(0,0,0,0.85); }
+
+/* Skeleton shimmer (disabled under prefers-reduced-motion) */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-base);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--surface-elevated), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* 3D tilt primitive — JS drives --rx/--ry (deg). Pure CSS fallback: flat. */
+.tilt {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease-out;
+  will-change: transform;
+}
+.tilt-lift { transform: translateZ(14px); }
+
+/* Telemetry numeral — F1-grade tabular readouts */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* Micro label type */
+.micro-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+/* Kicker above hero headlines — Rolex-style quiet label */
+.kicker {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+  .tilt { transform: none !important; transition: none; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Slim dark scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Range inputs in token style */
+input[type="range"] { accent-color: var(--accent-primary); }
+
+/* Native select/option popups stay dark */
+select option { background: var(--surface-elevated); color: var(--text-primary); }

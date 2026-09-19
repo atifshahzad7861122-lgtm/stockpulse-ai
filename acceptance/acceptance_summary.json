@@ -1,0 +1,289 @@
+{
+  "started_at": "2026-09-19T05:36:16+0000",
+  "sources": {
+    "rss": {
+      "name": "RSS feeds (blogs + photography press)",
+      "run_status": "SUCCESS",
+      "records_collected": 20,
+      "records_stored": 20,
+      "error": null,
+      "duration_s": 5.8,
+      "health_status": "AVAILABLE"
+    },
+    "scrapegraph_web": {
+      "name": "ScrapeGraphAI web discovery",
+      "run_status": "SUCCESS",
+      "records_collected": 20,
+      "records_stored": 20,
+      "error": null,
+      "duration_s": 20.7,
+      "health_status": "AVAILABLE"
+    },
+    "agentreach_web": {
+      "name": "Agent-Reach web channels",
+      "run_status": "SUCCESS",
+      "records_collected": 2,
+      "records_stored": 2,
+      "error": null,
+      "duration_s": 6.3,
+      "health_status": "AVAILABLE"
+    },
+    "v2ex": {
+      "name": "V2EX hot topics",
+      "run_status": "SUCCESS",
+      "records_collected": 8,
+      "records_stored": 8,
+      "error": null,
+      "duration_s": 4.2,
+      "health_status": "AVAILABLE"
+    },
+    "xueqiu": {
+      "name": "Xueqiu hot stocks",
+      "run_status": "SKIPPED",
+      "records_collected": 0,
+      "records_stored": 0,
+      "error": "skipped: adapter status NEEDS_AUTH \u2014 xueqiu: channels warn: xueqiu",
+      "duration_s": 3.4,
+      "health_status": "NEEDS_AUTH"
+    },
+    "youtube_rss": {
+      "name": "YouTube channel RSS",
+      "run_status": "SUCCESS",
+      "records_collected": 0,
+      "records_stored": 0,
+      "error": null,
+      "duration_s": 5.9,
+      "health_status": "AVAILABLE"
+    },
+    "github_trending": {
+      "name": "GitHub trending AI repos",
+      "run_status": "SUCCESS",
+      "records_collected": 20,
+      "records_stored": 20,
+      "error": null,
+      "duration_s": 2.8,
+      "health_status": "AVAILABLE"
+    },
+    "adobe_contributor": {
+      "name": "Adobe Contributor dashboard (private)",
+      "run_status": "SKIPPED",
+      "records_collected": 0,
+      "records_stored": 0,
+      "error": "skipped: adapter status NEEDS_AUTH \u2014 Adobe Contributor not configured: not configured \u2014 complete Adobe Contributor setup in /private",
+      "duration_s": 0.1,
+      "health_status": "NEEDS_AUTH"
+    }
+  },
+  "scrapegraph_tier1": {
+    "search_on_web": {
+      "ok": true,
+      "duration_s": 2.0,
+      "num_hits": 3,
+      "first_hit": "https://ltx.io/blog/ai-image-trends"
+    },
+    "markdownify": {
+      "ok": false,
+      "url": "https://ltx.io/blog/ai-image-trends",
+      "error": "InvalidURL: Invalid port: ':1]'"
+    }
+  },
+  "census": {
+    "snapshots": 5,
+    "signals": 70,
+    "signal_provenance": {
+      "THIRD_PARTY": 50,
+      "VERIFIED": 20
+    },
+    "sample_signals": [
+      {
+        "signal_name": "Kodak Ektar 100 Brings Fine Grain and Vivid Color Saturation",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T18:09:25",
+        "url": "https://petapixel.com/2026/09/18/kodak-ektar-100-brings-fine-grain-and-vivid-color-saturation/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "NASA Photos Show Before and After of Massive Asteroid Impact on the Moon",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T15:00:06",
+        "url": "https://petapixel.com/2026/09/18/nasa-photos-show-before-and-after-of-massive-asteroid-impact-on-the-moon/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "Photographers Outraged After Heavily AI-Edited Image Wins State Fair Photo Compe",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T14:10:45",
+        "url": "https://petapixel.com/2026/09/18/photographers-outraged-after-heavily-ai-edited-image-wins-state-fair-photo-competition/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "Save Hundreds on These 15 Mirrorless Cameras",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T13:32:42",
+        "url": "https://petapixel.com/2026/09/18/save-hundreds-on-these-15-mirrorless-cameras/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "Photographer Hides Behind Rock as Herd of 400 Wild Reindeer Comes Charging at Hi",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T12:31:15",
+        "url": "https://petapixel.com/2026/09/18/photographer-hides-behind-rock-as-herd-of-400-wild-reindeer-comes-charging-toward-him/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "Photographer Accidentally Double-Exposes Wedding Photos With Pictures of Her Dog",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T12:02:47",
+        "url": "https://petapixel.com/2026/09/18/photographer-accidentally-double-exposes-wedding-photos-with-pictures-of-her-dog-and-cat/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "British Museum Bans Photography of Historic \u2018Bayeux Tapestry\u2019 Days After Blockbu",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T11:32:11",
+        "url": "https://petapixel.com/2026/09/18/british-museum-bans-photography-of-historic-bayeux-tapestry-days-after-blockbuster-exhibition-opens/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "This Fascinating Documentary Gets Under the Skin of Street Photography",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T10:34:15",
+        "url": "https://petapixel.com/2026/09/18/this-fascinating-documentary-gets-under-the-skin-of-street-photography/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "\u2018Lunch Atop a Skyscraper\u2019 Photograph Immortalized in Bobblehead Form",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-18T10:00:13",
+        "url": "https://petapixel.com/2026/09/18/lunch-atop-a-skyscraper-photograph-immortalized-in-bobblehead-form/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "OpenAI Reportedly Buys Photo Processing Company Glass Imaging for $300 Million",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-17T21:40:42",
+        "url": "https://petapixel.com/2026/09/17/openai-reportedly-buys-photo-processing-company-glass-imaging-for-300-million/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "Adorable Photos of the First New Cat Species Discovered in Over a Century",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-17T18:59:40",
+        "url": "https://petapixel.com/2026/09/17/adorable-photos-of-the-first-new-cat-species-discovered-in-over-a-century/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      },
+      {
+        "signal_name": "The 31 Out-of-this-World Winners of Astronomy Photographer of the Year",
+        "provenance": "THIRD_PARTY",
+        "observed_at": "2026-09-17T18:30:41",
+        "url": "https://petapixel.com/2026/09/17/the-31-out-of-this-world-winners-of-astronomy-photographer-of-the-year/",
+        "snapshot_source": "RSS feeds (blogs + photography press)"
+      }
+    ]
+  },
+  "analysis": {
+    "topic": "AI",
+    "trend_velocity": 0.25,
+    "velocity_flag": "rising",
+    "momentum_flag": "narrow",
+    "market_consistency": 0.364,
+    "sources_used": {
+      "RSS feeds (blogs + photography press)": 3,
+      "GitHub trending AI repos": 17
+    },
+    "provenance": "THIRD_PARTY"
+  },
+  "opportunity": {
+    "id": "90f3deba-73be-413f-84ad-9b8c56edd6b0",
+    "title": "AI-generated commercial imagery demand",
+    "evidence_items": 5
+  },
+  "api": {
+    "trends": {
+      "status": 200,
+      "total": 5,
+      "items": [
+        {
+          "title": "GitHub trending AI repos",
+          "provenance": "VERIFIED",
+          "mock": false
+        },
+        {
+          "title": "V2EX hot topics",
+          "provenance": "THIRD_PARTY",
+          "mock": false
+        },
+        {
+          "title": "Agent-Reach web channels",
+          "provenance": "THIRD_PARTY",
+          "mock": false
+        },
+        {
+          "title": "ScrapeGraphAI web discovery",
+          "provenance": "THIRD_PARTY",
+          "mock": false
+        },
+        {
+          "title": "RSS feeds (blogs + photography press)",
+          "provenance": "THIRD_PARTY",
+          "mock": false
+        }
+      ]
+    },
+    "adobe_connection": {
+      "status": 200,
+      "body": {
+        "status": "NOT_CONFIGURED",
+        "configured": false,
+        "session_type": null,
+        "required_config": [
+          "session_type: how the session was captured (e.g. 'browser_export')",
+          "session_data: cookie/session export from YOUR OWN browser via PUT /api/private/connection (stored server-side only, never returned)"
+        ],
+        "last_sync": null,
+        "error": null
+      }
+    },
+    "health": {
+      "status": 200,
+      "rows": [
+        {
+          "source_type": "4ca5fd0c-1090-4b6c-a950-3d6a5451ac7c",
+          "status": "NEEDS_AUTH"
+        },
+        {
+          "source_type": "8fe98daa-6dbb-4156-b9c8-3192f08685f6",
+          "status": "AVAILABLE"
+        },
+        {
+          "source_type": "7d1293f8-1180-44d6-aa38-c5b23976538a",
+          "status": "AVAILABLE"
+        },
+        {
+          "source_type": "5755b385-a349-4fe6-9f75-11a65fda05f0",
+          "status": "NEEDS_AUTH"
+        },
+        {
+          "source_type": "c026aa09-1fe4-476e-b09a-88bee13e797f",
+          "status": "AVAILABLE"
+        },
+        {
+          "source_type": "ca2dec05-7488-423e-9aee-3ff5b61fdc7e",
+          "status": "AVAILABLE"
+        },
+        {
+          "source_type": "cfc26c9e-0b9c-4a92-b7e5-64c18815ad80",
+          "status": "AVAILABLE"
+        },
+        {
+          "source_type": "b3a8cb15-6de9-48cc-a2ea-8dc51f7ff2dc",
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    "opportunity_get": {
+      "status": 200
+    }
+  },
+  "finished_at": "2026-09-19T05:37:09+0000"
+}

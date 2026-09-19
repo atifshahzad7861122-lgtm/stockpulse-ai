@@ -1,0 +1,21 @@
+# Shared .dockerignore for StockPulse AI images (build context = repo root).
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+backend/tests/
+backend/stockpulse.db
+*.db
+*.sqlite3
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+# Repo meta (not needed inside images)
+.git/
+.gitignore
+acceptance/
+tunnel/
+research_notes/
