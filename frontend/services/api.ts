@@ -92,6 +92,33 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * Safe human-readable message from ANY query/mutation error.
+ * React Query surfaces whatever the queryFn threw: contract ApiClientErrors
+ * carry `.envelope`, but network/DNS failures surface as plain TypeErrors
+ * (e.g. "Failed to fetch") with no envelope. Never access `.envelope`
+ * unguarded — it crashes the render (full-page "Application error").
+ */
+export function errorMessage(err: unknown): string {
+  if (err instanceof ApiClientError) return err.envelope.message;
+  const envelope = (err as { envelope?: unknown } | null | undefined)?.envelope as
+    | { message?: unknown }
+    | undefined;
+  if (typeof envelope?.message === "string" && envelope.message.length > 0) {
+    return envelope.message;
+  }
+  if (err instanceof Error && err.message.length > 0) return err.message;
+  return "Request failed";
+}
+
+/** Safe trace id from a contract envelope, if the error carries one. */
+export function errorTraceId(err: unknown): string | undefined {
+  const envelope = (err as { envelope?: unknown } | null | undefined)?.envelope as
+    | { trace_id?: unknown }
+    | undefined;
+  return typeof envelope?.trace_id === "string" ? envelope.trace_id : undefined;
+}
+
 function idempotencyKey(): string {
   // Crypto-random idempotency key for mutating POSTs (CONTRACT §2.6).
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
