@@ -14,12 +14,39 @@ module.exports = {
         // Precision-instrument design system (2026-09-19 restyle).
         // Champagne gold is the single restrained accent; F1 racing red
         // (status.danger) is reserved strictly for alerts / live / critical.
-        bg: { primary: "#0A0A0C", secondary: "#0D0D10" },
-        surface: { base: "#141417", elevated: "#1B1B20" },
-        text: { primary: "#F5F3EE", secondary: "#A9A49A", muted: "#6F6A60" },
-        accent: { primary: "#D6B25E", secondary: "#E9CE8F" },
-        status: { success: "#34D399", warning: "#F5A524", danger: "#E10600", info: "#9A958A" },
-        border: { DEFAULT: "#242428", strong: "#35353B" },
+        //
+        // Theme-aware (2026-09-20): every semantic color resolves through a
+        // CSS variable so the dark/light toggle works app-wide. The
+        // `rgb(from var(--x) r g b / <alpha-value>)` form keeps Tailwind
+        // opacity modifiers (e.g. bg-accent-primary/10) working with vars.
+        // Actual values live in styles/globals.css (:root + [data-theme]).
+        bg: {
+          primary: "rgb(from var(--bg-primary) r g b / <alpha-value>)",
+          secondary: "rgb(from var(--bg-secondary) r g b / <alpha-value>)",
+        },
+        surface: {
+          base: "rgb(from var(--surface-base) r g b / <alpha-value>)",
+          elevated: "rgb(from var(--surface-elevated) r g b / <alpha-value>)",
+        },
+        text: {
+          primary: "rgb(from var(--text-primary) r g b / <alpha-value>)",
+          secondary: "rgb(from var(--text-secondary) r g b / <alpha-value>)",
+          muted: "rgb(from var(--text-muted) r g b / <alpha-value>)",
+        },
+        accent: {
+          primary: "rgb(from var(--accent-primary) r g b / <alpha-value>)",
+          secondary: "rgb(from var(--accent-secondary) r g b / <alpha-value>)",
+        },
+        status: {
+          success: "rgb(from var(--status-success) r g b / <alpha-value>)",
+          warning: "rgb(from var(--status-warning) r g b / <alpha-value>)",
+          danger: "rgb(from var(--status-danger) r g b / <alpha-value>)",
+          info: "rgb(from var(--status-info) r g b / <alpha-value>)",
+        },
+        border: {
+          DEFAULT: "rgb(from var(--border-default) r g b / <alpha-value>)",
+          strong: "rgb(from var(--border-strong) r g b / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
