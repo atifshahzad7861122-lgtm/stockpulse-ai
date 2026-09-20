@@ -18,7 +18,19 @@ const bodoni = Bodoni_Moda({ subsets: ["latin"], variable: "--font-bodoni", disp
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${bodoni.variable}`}>
+    // suppressHydrationWarning: the inline theme script below may set
+    // data-theme before React hydrates; the attribute is cosmetic.
+    <html lang="en" className={`${inter.variable} ${bodoni.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Theme bootstrap — runs before first paint so there is no
+            dark/light flash. Reads localStorage, falls back to the OS
+            preference, defaults to dark. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('stockpulse-theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();`,
+          }}
+        />
+      </head>
       <body>
         <Providers>
           <BannerStack>
