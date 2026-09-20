@@ -8,7 +8,8 @@
 import { ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { Badge, Tooltip, cx } from "./ui";
 import { confidenceBand, provenanceLabel, saturationBand, scoreBand } from "../lib/scores";
-import { GOLD, SCORE_TRACK, scoreBandColor } from "./palette";
+import { GOLD, scoreBandColor } from "./palette";
+import { useChartPalette } from "../hooks/useChartPalette";
 import { CountUp } from "./motion/motion";
 import type {
   ComplianceResult,
@@ -40,6 +41,7 @@ export function ScoreRing({
   /** Render the numeral in the Didone serif — hero moments only. */
   serif?: boolean;
 }) {
+  const pal = useChartPalette();
   if (value === null || value === undefined || Number.isNaN(value)) {
     return (
       <span className="inline-flex items-center gap-2 text-text-muted">
@@ -68,7 +70,7 @@ export function ScoreRing({
         role="img"
         aria-label={`Score ${Math.round(value)} out of 100, band ${bandName}`}
       >
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={SCORE_TRACK} strokeWidth="6" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={pal.track} strokeWidth="6" />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -121,6 +123,7 @@ export function ScoreBar({
   color?: string;
   showBand?: boolean;
 }) {
+  const pal = useChartPalette();
   if (value === null || value === undefined || Number.isNaN(value)) {
     return (
       <span className="text-xs text-text-muted">
@@ -140,7 +143,7 @@ export function ScoreBar({
           {showBand && <span className="ml-1 font-semibold" style={{ color: barColor }}>{bandName}</span>}
         </span>
       </span>
-      <span className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: SCORE_TRACK }} aria-hidden>
+      <span className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: pal.track }} aria-hidden>
         <span className="block h-full rounded-full" style={{ width: `${value}%`, background: barColor }} />
       </span>
     </span>
@@ -152,6 +155,7 @@ export function ScoreBar({
 // ---------------------------------------------------------------------------
 
 export function ScoreInline({ value }: { value: number | null | undefined }) {
+  const pal = useChartPalette();
   if (value === null || value === undefined || Number.isNaN(value)) return <span className="text-text-muted">—</span>;
   const band = scoreBand(value);
   const color = scoreBandColor(band);
@@ -164,7 +168,7 @@ export function ScoreInline({ value }: { value: number | null | undefined }) {
         {[0, 1, 2].map((i) => {
           const filled = band === "high" ? i < 3 : band === "medium" ? i < 2 : i < 1;
           return (
-            <span key={i} className="h-1 w-3 rounded-sm" style={{ background: filled ? color : SCORE_TRACK }} />
+            <span key={i} className="h-1 w-3 rounded-sm" style={{ background: filled ? color : pal.track }} />
           );
         })}
       </span>
@@ -178,6 +182,7 @@ export function ScoreInline({ value }: { value: number | null | undefined }) {
 // ---------------------------------------------------------------------------
 
 export function ConfidenceMeter({ value, compact }: { value: number | null | undefined; compact?: boolean }) {
+  const pal = useChartPalette();
   if (value === null || value === undefined || Number.isNaN(value))
     return <span className="text-xs text-text-muted">No confidence data</span>;
   const pct = value <= 1 ? value * 100 : value;
@@ -185,7 +190,7 @@ export function ConfidenceMeter({ value, compact }: { value: number | null | und
   return (
     <Tooltip label={`Prediction confidence ${Math.round(pct)}% (${band}). Probabilistic — not a guarantee.`}>
       <span className={cx("inline-flex items-center gap-1.5", compact && "gap-1")}>
-        <span className={cx("overflow-hidden rounded-full", compact ? "h-1 w-10" : "h-1.5 w-16")} style={{ background: SCORE_TRACK }} aria-hidden>
+        <span className={cx("overflow-hidden rounded-full", compact ? "h-1 w-10" : "h-1.5 w-16")} style={{ background: pal.track }} aria-hidden>
           <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: GOLD }} />
         </span>
         <span className="tnum text-[11px] font-semibold text-text-secondary">
