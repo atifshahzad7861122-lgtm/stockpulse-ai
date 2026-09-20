@@ -29,10 +29,10 @@ import {
   RACING_RED,
   STEEL,
   SUCCESS,
-  SURFACE_ELEVATED,
   TICK as PAL_TICK,
   WARNING,
 } from "./palette";
+import { useChartPalette, type ChartPalette } from "../hooks/useChartPalette";
 
 export const GRID = PAL_GRID;
 export const TICK = PAL_TICK;
@@ -44,16 +44,17 @@ export const DANGER_SERIES = RACING_RED;
 export const WARNING_SERIES = WARNING;
 
 function ChartTooltip({ active, payload, label, formatter }: any) {
+  const pal = useChartPalette();
   if (!active || !payload?.length) return null;
   return (
     <div
       className="depth-2 rounded-lg border border-border px-3 py-2 text-xs"
-      style={{ background: SURFACE_ELEVATED }}
+      style={{ background: pal.surface }}
     >
       <p className="tnum mb-1 font-bold text-text-primary">{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} className="flex items-center gap-2 text-text-secondary">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color ?? p.payload?.fill ?? MUTED_SERIES }} />
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color ?? p.payload?.fill ?? pal.muted }} />
           {p.name}:{" "}
           <span className="tnum font-bold text-text-primary">
             {formatter ? formatter(p.value, p.name) : p.value}
@@ -71,11 +72,11 @@ export interface SeriesDef {
   accent?: boolean;
 }
 
-const baseAxis = {
-  tick: { fill: TICK, fontSize: 11 },
-  axisLine: { stroke: GRID },
+const baseAxis = (pal: ChartPalette) => ({
+  tick: { fill: pal.tick, fontSize: 11 },
+  axisLine: { stroke: pal.grid },
   tickLine: false as const,
-};
+});
 
 export function TrendLineChart({
   data,
@@ -94,6 +95,8 @@ export function TrendLineChart({
   formatter?: (v: number, name: string) => string;
   ariaLabel: string;
 }) {
+  const pal = useChartPalette();
+  const axis = baseAxis(pal);
   if (!data.length)
     return (
       <p className="py-8 text-center text-xs text-text-muted" role="img" aria-label={ariaLabel}>
@@ -110,13 +113,13 @@ export function TrendLineChart({
     <div role="img" aria-label={ariaLabel} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RLine data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-          <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="label" {...baseAxis} minTickGap={24} />
-          <YAxis {...baseAxis} domain={yDomain ?? ["auto", "auto"]} width={44} tickFormatter={(v: number) => String(v)} />
+          <CartesianGrid stroke={pal.grid} strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="label" {...axis} minTickGap={24} />
+          <YAxis {...axis} domain={yDomain ?? ["auto", "auto"]} width={44} tickFormatter={(v: number) => String(v)} />
           <Tooltip content={<ChartTooltip formatter={formatter} />} />
-          {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: TICK }} />}
+          {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: pal.tick }} />}
           {reference && (
-            <ReferenceLine y={reference.y} stroke={TICK} strokeDasharray="4 4" label={{ value: reference.label, fill: TICK, fontSize: 10 }} />
+            <ReferenceLine y={reference.y} stroke={pal.tick} strokeDasharray="4 4" label={{ value: reference.label, fill: pal.tick, fontSize: 10 }} />
           )}
           {series.map((s) => (
             <Line
@@ -124,10 +127,10 @@ export function TrendLineChart({
               type="monotone"
               dataKey={s.key}
               name={s.name}
-              stroke={s.color ?? (s.accent ? GOLD : MUTED_SERIES)}
+              stroke={s.color ?? (s.accent ? GOLD : pal.muted)}
               strokeWidth={s.accent ? 2.5 : 1.75}
               dot={false}
-              activeDot={{ r: 3, stroke: s.color ?? (s.accent ? GOLD : MUTED_SERIES) }}
+              activeDot={{ r: 3, stroke: s.color ?? (s.accent ? GOLD : pal.muted) }}
               connectNulls={false}
             />
           ))}
@@ -152,6 +155,8 @@ export function TrendBarChart({
   ariaLabel: string;
   horizontal?: boolean;
 }) {
+  const pal = useChartPalette();
+  const axis = baseAxis(pal);
   if (!data.length)
     return (
       <p className="py-8 text-center text-xs text-text-muted" role="img" aria-label={ariaLabel}>
@@ -162,26 +167,26 @@ export function TrendBarChart({
     <div role="img" aria-label={ariaLabel} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RBar data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }} layout={horizontal ? "vertical" : "horizontal"}>
-          <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke={pal.grid} strokeDasharray="3 3" vertical={false} />
           {horizontal ? (
             <>
-              <XAxis type="number" {...baseAxis} />
-              <YAxis type="category" dataKey="label" {...baseAxis} width={110} />
+              <XAxis type="number" {...axis} />
+              <YAxis type="category" dataKey="label" {...axis} width={110} />
             </>
           ) : (
             <>
-              <XAxis dataKey="label" {...baseAxis} minTickGap={16} />
-              <YAxis {...baseAxis} width={44} />
+              <XAxis dataKey="label" {...axis} minTickGap={16} />
+              <YAxis {...axis} width={44} />
             </>
           )}
-          <Tooltip content={<ChartTooltip formatter={formatter} />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-          {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: TICK }} />}
+          <Tooltip content={<ChartTooltip formatter={formatter} />} cursor={{ fill: pal.grid }} />
+          {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: pal.tick }} />}
           {series.map((s) => (
             <Bar
               key={s.key}
               dataKey={s.key}
               name={s.name}
-              fill={s.color ?? (s.accent ? GOLD : MUTED_SERIES)}
+              fill={s.color ?? (s.accent ? GOLD : pal.muted)}
               radius={[3, 3, 0, 0]}
               maxBarSize={28}
             />
@@ -201,6 +206,8 @@ export function ConfidenceAreaChart({
   height?: number;
   ariaLabel: string;
 }) {
+  const pal = useChartPalette();
+  const axis = baseAxis(pal);
   if (!data.length)
     return (
       <p className="py-8 text-center text-xs text-text-muted" role="img" aria-label={ariaLabel}>
@@ -211,12 +218,12 @@ export function ConfidenceAreaChart({
     <div role="img" aria-label={ariaLabel} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RArea data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-          <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="label" {...baseAxis} minTickGap={24} />
-          <YAxis {...baseAxis} width={44} />
+          <CartesianGrid stroke={pal.grid} strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="label" {...axis} minTickGap={24} />
+          <YAxis {...axis} width={44} />
           <Tooltip content={<ChartTooltip />} />
           <Area type="monotone" dataKey="high" name="Upper bound" stroke="none" fill={GOLD} fillOpacity={0.14} />
-          <Area type="monotone" dataKey="low" name="Lower bound" stroke="none" fill={SURFACE_ELEVATED} fillOpacity={1} />
+          <Area type="monotone" dataKey="low" name="Lower bound" stroke="none" fill={pal.surface} fillOpacity={1} />
           <Area type="monotone" dataKey="value" name="Estimate" stroke={GOLD} strokeWidth={2} fill={GOLD} fillOpacity={0.08} dot={false} />
         </RArea>
       </ResponsiveContainer>
@@ -232,6 +239,7 @@ export function MiniBars({
   rows: { label: string; value: number; color?: string; suffix?: string }[];
   max?: number;
 }) {
+  const pal = useChartPalette();
   const m = max ?? Math.max(1, ...rows.map((r) => r.value));
   return (
     <div className="space-y-2">
@@ -240,10 +248,10 @@ export function MiniBars({
           <span className="w-32 shrink-0 truncate text-xs text-text-secondary" title={r.label}>
             {r.label}
           </span>
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "#242428" }} aria-hidden>
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: pal.track }} aria-hidden>
             <span
               className="block h-full rounded-full"
-              style={{ width: `${Math.min(100, (r.value / m) * 100)}%`, background: r.color ?? MUTED_SERIES }}
+              style={{ width: `${Math.min(100, (r.value / m) * 100)}%`, background: r.color ?? pal.muted }}
             />
           </span>
           <span className="tnum w-14 shrink-0 text-right text-xs font-bold text-text-primary">
@@ -257,17 +265,19 @@ export function MiniBars({
 
 /** Distribution bars (score histogram). */
 export function Histogram({ bins, height = 160, ariaLabel }: { bins: { label: string; count: number; fill?: string }[]; height?: number; ariaLabel: string }) {
+  const pal = useChartPalette();
+  const axis = baseAxis(pal);
   return (
     <div role="img" aria-label={ariaLabel} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RBar data={bins} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-          <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="label" {...baseAxis} />
-          <YAxis {...baseAxis} allowDecimals={false} width={36} />
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+          <CartesianGrid stroke={pal.grid} strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="label" {...axis} />
+          <YAxis {...axis} allowDecimals={false} width={36} />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: pal.grid }} />
           <Bar dataKey="count" name="Items" radius={[3, 3, 0, 0]} maxBarSize={36}>
             {bins.map((b, i) => (
-              <Cell key={i} fill={b.fill ?? MUTED_SERIES} />
+              <Cell key={i} fill={b.fill ?? pal.muted} />
             ))}
           </Bar>
         </RBar>
