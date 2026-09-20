@@ -92,6 +92,10 @@ def _run_kind(db: Session, run: AgentRun, input: dict[str, Any], kind: str) -> d
                 "originality_notes": c["originality_notes"],
                 "status": IdeaStatus.DRAFT,
                 "agent_run_id": run.id,
+                # Store the provider's provenance on the record itself so
+                # resolve_provenance() labels real LLM output THIRD_PARTY
+                # instead of inferring MOCK from agent_run_id.
+                "data_provenance": provenance,
             }
             if kind == "video":
                 kwargs["duration_target_seconds"] = 8
