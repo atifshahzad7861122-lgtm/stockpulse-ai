@@ -5,6 +5,8 @@
  * (Bodoni Moda) for hero moments only; Inter everywhere else.
  */
 :root {
+  color-scheme: dark;
+
   /* Backgrounds & surfaces — near-black, warm-neutral */
   --bg-primary: #0a0a0c;
   --bg-secondary: #0d0d10;
@@ -29,6 +31,9 @@
   /* Hairline borders */
   --border-default: #242428;
   --border-strong: #35353b;
+
+  /* Chart grid hairline (resolved by JS for recharts/SVG, see useChartPalette) */
+  --chart-grid: rgba(255, 255, 255, 0.06);
 
   /* Typography — next/font injects --font-inter/--font-bodoni on <html>;
      --font-display is the hero/display stack built from Bodoni. */
@@ -136,3 +141,51 @@ input[type="range"] { accent-color: var(--accent-primary); }
 
 /* Native select/option popups stay dark */
 select option { background: var(--surface-elevated); color: var(--text-primary); }
+
+/* ------------------------------------------------------------------ */
+/* Light theme (2026-09-20) — "white" mode. Warm paper surfaces, ink    */
+/* text, deeper gold for contrast. Selected via the header toggle; the  */
+/* choice persists in localStorage (stockpulse-theme).                  */
+/* ------------------------------------------------------------------ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-primary: #fafaf7;
+  --bg-secondary: #f2f1eb;
+  --surface-base: #ffffff;
+  --surface-elevated: #eceae2;
+
+  --text-primary: #1c1915;
+  --text-secondary: #5c564a;
+  --text-muted: #8e887a;
+
+  /* Gold deepened so it stays legible on paper */
+  --accent-primary: #97742a;
+  --accent-secondary: #7c5e1f;
+
+  --status-success: #0e9f6e;
+  --status-warning: #b45309;
+  --status-danger: #e10600;
+  --status-info: #6e695d;
+
+  --border-default: #e3e0d4;
+  --border-strong: #cbc5b2;
+
+  --chart-grid: rgba(28, 25, 21, 0.08);
+}
+
+/* Chips: danger/info text tuned for light backgrounds */
+[data-theme="light"] .chip-danger { color: #b42318; }
+[data-theme="light"] .chip-info { color: #5c564a; }
+[data-theme="light"] .chip-accent { color: var(--accent-secondary); }
+
+/* Physical depth — softer, paper-appropriate shadows in light mode */
+[data-theme="light"] .depth-1 {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(28, 25, 21, 0.06), 0 12px 32px -16px rgba(28, 25, 21, 0.16);
+}
+[data-theme="light"] .depth-2 {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 4px rgba(28, 25, 21, 0.06), 0 24px 64px -24px rgba(28, 25, 21, 0.2);
+}
+
+/* Native controls follow the light theme */
+[data-theme="light"] select option { background: #ffffff; color: #1c1915; }
