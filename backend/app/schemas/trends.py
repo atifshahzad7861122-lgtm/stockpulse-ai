@@ -40,6 +40,13 @@ class TrendItem(BaseModel):
     signal_count: int = 0
     created_at: datetime
     updated_at: datetime
+    # 7D/30D momentum + signal bands (FINAL MASTER SPEC §10–12). signal_30d /
+    # momentum_30d are None when the 30-day window has insufficient history.
+    momentum_7d: str | None = None
+    momentum_30d: str | None = None
+    signal_7d: str | None = None
+    signal_30d: str | None = None
+    signal_kind: str | None = None
 
 
 class SignalBreakdown(BaseModel):

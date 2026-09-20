@@ -25,6 +25,7 @@ from app.models.compliance import ComplianceCheck, ComplianceRule, SimilarityRec
 from app.models.fusion import OpportunityFusionScore
 from app.models.ideation import ImageIdea, VideoIdea
 from app.models.intelligence import (
+    AssetAnalysis,
     MarketMetric,
     Opportunity,
     Prediction,

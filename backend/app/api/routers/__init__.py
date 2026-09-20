@@ -3,6 +3,7 @@
 from app.api.routers import (
     agents,
     analytics,
+    asset_analysis,
     assets,
     categories,
     compliance,
@@ -10,6 +11,7 @@ from app.api.routers import (
     health,
     ideas,
     library,
+    market_intelligence,
     metadata,
     notifications,
     opportunities,
@@ -30,6 +32,7 @@ from app.api.routers import (
 __all__ = [
     "agents",
     "analytics",
+    "asset_analysis",
     "assets",
     "categories",
     "compliance",
@@ -37,6 +40,7 @@ __all__ = [
     "health",
     "ideas",
     "library",
+    "market_intelligence",
     "metadata",
     "notifications",
     "opportunities",

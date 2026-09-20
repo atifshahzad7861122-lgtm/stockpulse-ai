@@ -334,6 +334,17 @@ class OllamaLLMProvider(LLMProvider):
             "Write a short daily briefing from the provided counts. Do not invent "
             "numbers; report only what the context contains."
         ),
+        "asset_analysis": (
+            "Analyze a high-performing stock opportunity's market context and "
+            "produce an ORIGINAL commercial concept plus three generation prompts "
+            "(primary, alternative, different use case) and a negative prompt. "
+            "ORIGINALITY IS STRICT: never recreate, copy, or imitate an existing "
+            "asset's composition, pose, camera setup, or artist style; preserve "
+            "only topic, market, keywords, and commercial intent while changing "
+            "meaningful creative elements. Respond with strict JSON only "
+            "(commercial_analysis, original_concept, prompt_a, prompt_b, "
+            "prompt_c, negative_prompt) — no markdown fences."
+        ),
     }
 
     def __init__(
@@ -505,9 +516,20 @@ class GeminiLLMProvider(LLMProvider):
             "did, citing only the evidence provided. Never promise sales, rankings, "
             "or any guaranteed outcome."
         ),
+        "asset_analysis": (
+            "Analyze a high-performing stock opportunity's market context and "
+            "produce an ORIGINAL commercial concept plus three generation prompts "
+            "(primary, alternative, different use case) and a negative prompt. "
+            "ORIGINALITY IS STRICT: never recreate, copy, or imitate an existing "
+            "asset's composition, pose, camera setup, or artist style; preserve "
+            "only topic, market, keywords, and commercial intent while changing "
+            "meaningful creative elements. Respond with strict JSON only "
+            "(commercial_analysis, original_concept, prompt_a, prompt_b, "
+            "prompt_c, negative_prompt) — no markdown fences."
+        ),
     }
 
-    def __init__(
+    def __init__(  # noqa: E501 — Gemini provider init (api_key redacted in reports)
         self,
         api_key: str | None = None,
         model: str | None = None,

@@ -25,6 +25,23 @@ class DataProvenance(StrEnum):
     MOCK = "MOCK"  # contract extension: demo/placeholder data (never real)
 
 
+class SignalKind(StrEnum):
+    """What a market signal actually measures (FINAL MASTER SPEC §8).
+
+    Never label a signal SALES or DOWNLOADS unless the source genuinely
+    provides sales/download figures. Most public web signals are one of the
+    *_SIGNAL kinds below.
+    """
+
+    SALES = "SALES"
+    DOWNLOADS = "DOWNLOADS"
+    TREND_SIGNAL = "TREND_SIGNAL"
+    POPULARITY_SIGNAL = "POPULARITY_SIGNAL"
+    SEARCH_SIGNAL = "SEARCH_SIGNAL"
+    PUBLIC_DEMAND_SIGNAL = "PUBLIC_DEMAND_SIGNAL"
+    ESTIMATED_SIGNAL = "ESTIMATED_SIGNAL"
+
+
 class SourceStatus(StrEnum):
     """Phase 2 source health (PHASE2_DESIGN.md §1; API §5 exposes identically)."""
 
@@ -233,6 +250,7 @@ class AgentRunKind(StrEnum):
     PREDICTION = "PREDICTION"
     IDEA_GENERATION = "IDEA_GENERATION"
     PROMPT_GENERATION = "PROMPT_GENERATION"
+    ASSET_ANALYSIS = "ASSET_ANALYSIS"
     COMPLIANCE_SCREEN = "COMPLIANCE_SCREEN"
     SIMILARITY_SCAN = "SIMILARITY_SCAN"
     METADATA_DRAFT = "METADATA_DRAFT"

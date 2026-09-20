@@ -201,4 +201,4 @@ def test_trends_router_30d_window_uses_real_30d_scores(client, db):
     resp7 = client.get("/api/trends?window=7d")
     row7 = next(i for i in resp7.json()["data"] if i["title"] == "ai business portraits")
     assert row7["signal_7d"] == "HIGH"
-    assert row7["signal_30d"] is None  # 7D view does not compute the 30D band
+    assert row7["signal_30d"] is None  # 7D view doesn't compute the 30D band

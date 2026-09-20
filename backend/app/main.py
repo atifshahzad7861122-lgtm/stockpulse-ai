@@ -141,6 +141,8 @@ for _router in (
     routers.opportunities.router,
     routers.ideas.router,
     routers.prompts.router,
+    routers.market_intelligence.router,
+    routers.asset_analysis.router,
     routers.compliance.router,
     routers.daily_production.router,
     routers.recommendations.router,

@@ -176,3 +176,35 @@ class Opportunity(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin, SoftDeleteMix
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     agent_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class AssetAnalysisStatus:
+    PENDING = "PENDING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
+class AssetAnalysis(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin):
+    """Viral/high-performing asset analyzer output (FINAL MASTER SPEC §21–32).
+
+    Append-only: a completed analysis is cached and reused (prompt caching);
+    regenerations create new rows. Stores prompt TEXT only — never media.
+    """
+
+    __tablename__ = "asset_analyses"
+
+    opportunity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    asset_type: Mapped[str] = mapped_column(String(16), nullable=False)  # image | video
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING")
+    market_context: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    commercial_analysis: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    original_concept: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prompt_a: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prompt_b: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prompt_c: Mapped[str | None] = mapped_column(Text, nullable=True)
+    negative_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    data_provenance: Mapped[DataProvenance] = mapped_column(
+        _prov_enum(), nullable=False, default=DataProvenance.THIRD_PARTY
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

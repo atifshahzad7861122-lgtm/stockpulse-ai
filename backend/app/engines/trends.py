@@ -147,3 +147,174 @@ class SevenDayRun:
     window_w0_end: str
     analyses: tuple[TrendAnalysis, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
+
+
+# ---------------------------------------------------------------------------
+# 30-day analysis (FINAL MASTER SPEC §11–12).
+#
+# Same math as the 7-day model, but on 30-day windows:
+# - M0 (current): most recent complete 30 days
+# - M1 (previous): the 30 days before M0
+# ---------------------------------------------------------------------------
+
+# Momentum classification thresholds on a velocity value clipped to [-1, +3].
+MOMENTUM_STRONGLY_RISING_MIN = 1.0
+MOMENTUM_RISING_MIN = 0.25
+MOMENTUM_STABLE_MIN = -0.25
+MOMENTUM_DECLINING_MIN = -1.0
+
+# Signal band thresholds on a 0–100 normalized score.
+SIGNAL_HIGH_MIN = 66.0
+SIGNAL_MEDIUM_MIN = 33.0
+
+
+def monthly_velocity(m0: float, m1: float) -> float:
+    """MV = (V(M0) − V(M1)) / max(V(M1), ε), clipped [−1, +3]."""
+    return _clip_raw((m0 - m1) / max(m1, DIVIDE_BY_ZERO_EPSILON))
+
+
+def classify_momentum(velocity: float) -> str:
+    """Five-level momentum classification (spec §10).
+
+    STRONGLY_RISING | RISING | STABLE | DECLINING | STRONGLY_DECLINING
+    """
+    if velocity >= MOMENTUM_STRONGLY_RISING_MIN:
+        return "STRONGLY_RISING"
+    if velocity >= MOMENTUM_RISING_MIN:
+        return "RISING"
+    if velocity >= MOMENTUM_STABLE_MIN:
+        return "STABLE"
+    if velocity >= MOMENTUM_DECLINING_MIN:
+        return "DECLINING"
+    return "STRONGLY_DECLINING"
+
+
+def signal_band(score_100: float) -> str:
+    """HIGH | MEDIUM | LOW band for a 0–100 normalized signal."""
+    if score_100 >= SIGNAL_HIGH_MIN:
+        return "HIGH"
+    if score_100 >= SIGNAL_MEDIUM_MIN:
+        return "MEDIUM"
+    return "LOW"
+
+
+@dataclass(frozen=True)
+class ThirtyDayValues:
+    """Aggregate signal values for the two 30-day analysis windows."""
+
+    m0: float
+    m1: float
+
+
+@dataclass(frozen=True)
+class ThirtyDayAnalysis:
+    topic: str
+    monthly_velocity: float
+    momentum: str
+    signal: str
+    explanation: str
+    provenance: str = "THIRD_PARTY"
+
+
+def analyze_30d(
+    topic: str,
+    months: ThirtyDayValues,
+    score_100: float,
+    provenance: str = "THIRD_PARTY",
+) -> ThirtyDayAnalysis:
+    """Run the 30-day analysis for one topic/micro-niche.
+
+    ``score_100`` is the already-normalized 0–100 30-day signal (see
+    engines.market_intelligence); it drives the HIGH/MEDIUM/LOW band.
+    """
+    mv = monthly_velocity(months.m0, months.m1)
+    momentum = classify_momentum(mv)
+    band = signal_band(score_100)
+    explanation = (
+        f"{topic}: 30-day velocity {mv:+.2f} ({momentum.lower().replace('_', ' ')}) "
+        f"vs previous 30 days; 30-day signal {band} ({score_100:.0f}/100)."
+    )
+    return ThirtyDayAnalysis(
+        topic=topic,
+        monthly_velocity=round(mv, 3),
+        momentum=momentum,
+        signal=band,
+        explanation=explanation,
+        provenance=provenance,
+    )
+
+
+def _direction(momentum: str) -> str:
+    if momentum in ("STRONGLY_RISING", "RISING"):
+        return "up"
+    if momentum in ("STRONGLY_DECLINING", "DECLINING"):
+        return "down"
+    return "flat"
+
+
+def _stronger(m1: str, m2: str, direction: str) -> str:
+    order = ["STRONGLY_DECLINING", "DECLINING", "STABLE", "RISING", "STRONGLY_RISING"]
+    i1, i2 = order.index(m1), order.index(m2)
+    return order[max(i1, i2)] if direction == "up" else order[min(i1, i2)]
+
+
+@dataclass(frozen=True)
+class WindowComparison:
+    """7-day vs 30-day comparison for one topic (spec §12)."""
+
+    topic: str
+    velocity_7d: float
+    velocity_30d: float
+    momentum_7d: str
+    momentum_30d: str
+    signal_7d: str
+    signal_30d: str
+    momentum: str
+    explanation: str
+
+
+def compare_7d_30d(
+    topic: str,
+    tv_7d: float,
+    tv_30d: float,
+    score_7d: float,
+    score_30d: float,
+) -> WindowComparison:
+    """Compare short-term (7d) vs longer-term (30d) movement.
+
+    Combined momentum: the stronger agreeing direction when both windows agree;
+    STABLE when they diverge (a short-term spike inside a declining market, or
+    vice versa), with the divergence spelled out in the explanation.
+    """
+    m7 = classify_momentum(tv_7d)
+    m30 = classify_momentum(tv_30d)
+    s7 = signal_band(score_7d)
+    s30 = signal_band(score_30d)
+    d7, d30 = _direction(m7), _direction(m30)
+    if d7 == d30 and d7 != "flat":
+        combined = _stronger(m7, m30, d7)
+        note = f"7D and 30D agree ({combined.lower().replace('_', ' ')})."
+    elif d7 == "flat" and d30 == "flat":
+        combined = "STABLE"
+        note = "7D and 30D both flat."
+    else:
+        combined = "STABLE"
+        note = (
+            f"7D and 30D diverge (7D {m7.lower().replace('_', ' ')}, "
+            f"30D {m30.lower().replace('_', ' ')}) — treated as stable until they agree."
+        )
+    explanation = (
+        f"{topic}: 7D signal {s7} (velocity {tv_7d:+.2f}), "
+        f"30D signal {s30} (velocity {tv_30d:+.2f}). {note}"
+    )
+    return WindowComparison(
+        topic=topic,
+        velocity_7d=round(tv_7d, 3),
+        velocity_30d=round(tv_30d, 3),
+        momentum_7d=m7,
+        momentum_30d=m30,
+        signal_7d=s7,
+        signal_30d=s30,
+        momentum=combined,
+        explanation=explanation,
+    )

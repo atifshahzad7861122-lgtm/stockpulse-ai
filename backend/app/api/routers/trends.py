@@ -18,7 +18,15 @@ from app.api.deps import (
     pagination_params,
 )
 from app.engines.scoring import norm100, trend_score
-from app.engines.trends import keyword_momentum, search_growth, trend_velocity
+from app.engines.trends import (
+    classify_momentum,
+    keyword_momentum,
+    monthly_velocity,
+    search_growth,
+    signal_band,
+    trend_velocity,
+)
+from app.engines import market_intelligence as mi
 from app.models.intelligence import TrendSignal, TrendSnapshot, TrendSource
 from app.models.taxonomy import Category, MicroNiche, Subcategory
 from app.schemas.agents import JobCreate
@@ -70,10 +78,11 @@ def _to_item(db: Session, snapshot: TrendSnapshot, window: str = "7d") -> TrendI
     payload = snapshot.payload or {}
     topic = payload.get("topic", "unknown")
     provenance = _provenance_for(payload)
+    score, momentum_7d, momentum_30d, signal_7d, signal_30d = _window_scores(db, payload, topic, window)
     return TrendItem(
         id=snapshot.id,
         title=topic,
-        score=_score_for(payload),
+        score=score,
         window=window,  # type: ignore[arg-type]
         provenance=provenance,
         mock=provenance == DataProvenance.MOCK,
@@ -85,7 +94,59 @@ def _to_item(db: Session, snapshot: TrendSnapshot, window: str = "7d") -> TrendI
         ),
         created_at=snapshot.created_at,
         updated_at=snapshot.created_at,
+        momentum_7d=momentum_7d,
+        momentum_30d=momentum_30d,
+        signal_7d=signal_7d,
+        signal_30d=signal_30d,
+        signal_kind=_signal_kind_for_snapshot(db, snapshot),
     )
+
+
+def _window_scores(
+    db: Session, payload: dict, topic: str, window: str
+) -> tuple[float, str, str | None, str, str | None]:
+    """(score, momentum_7d, momentum_30d, signal_7d, signal_30d).
+
+    window="30d" computes a REAL 30-day score from trailing signal history;
+    other windows use the canonical 7-day payload score.
+    """
+    w0 = float(payload.get("w0_mean", 0) or 0)
+    w1 = float(payload.get("w1_mean", 0) or 0)
+    tv7 = trend_velocity(w0, w1)
+    momentum_7d = classify_momentum(tv7)
+    score7 = _score_for(payload)
+    signal_7d = signal_band(score7)
+    if window == "30d":
+        monthly = mi.topic_monthly(db, topic)
+        if monthly is not None:
+            m0, m1, _, _ = monthly
+            mv = monthly_velocity(m0, m1)
+            score30 = float(norm100(mv, -1, 3))
+            return score30, momentum_7d, classify_momentum(mv), signal_7d, signal_band(score30)
+    return score7, momentum_7d, None, signal_7d, None
+
+
+def _signal_kind_for_snapshot(db: Session, snapshot: TrendSnapshot) -> str:
+    """Honest signal-kind label from the snapshot's signal rows (metric names
+    in the DB), falling back to any metric names embedded in the payload."""
+    rows = (
+        db.query(TrendSignal.metric_name)
+        .filter(
+            TrendSignal.trend_snapshot_id == snapshot.id,
+            TrendSignal.metric_name.isnot(None),
+        )
+        .all()
+    )
+    names = [r[0] for r in rows]
+    if not names:
+        payload = snapshot.payload or {}
+        names = [
+            s.get("metric_name")
+            for s in (payload.get("signals") or [])
+            if s.get("metric_name")
+        ]
+    dominant = max(set(names), key=names.count) if names else None
+    return mi.signal_kind_for(dominant).value
 
 
 @router.get("", response_model=Page[TrendItem])
