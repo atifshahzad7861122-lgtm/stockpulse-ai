@@ -37,6 +37,13 @@ class ImageIdea(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin, SoftDeleteMixin
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     agent_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    data_provenance: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+        comment="Provenance label from the generating LLM provider "
+        "(MOCK / THIRD_PARTY). Wins over the agent_run_id inference in "
+        "resolve_provenance so real provider output is never mislabeled MOCK.",
+    )
 
 
 class VideoIdea(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin, SoftDeleteMixin):
@@ -59,3 +66,10 @@ class VideoIdea(Base, UUIDPrimaryKeyMixin, AuditTimestampsMixin, SoftDeleteMixin
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     agent_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    data_provenance: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+        comment="Provenance label from the generating LLM provider "
+        "(MOCK / THIRD_PARTY). Wins over the agent_run_id inference in "
+        "resolve_provenance so real provider output is never mislabeled MOCK.",
+    )
