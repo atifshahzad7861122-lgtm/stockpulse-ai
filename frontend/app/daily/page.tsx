@@ -397,7 +397,7 @@ function FusionZone() {
 
 // ===========================================================================
 // ACTION — WHAT TO CREATE TODAY
-// ===========================================================================
+// ============================================================================
 
 const REC_STATUS_TONE: Record<ProductionRecommendation["status"], "muted" | "info" | "success" | "warning" | "neutral"> = {
   recommended: "warning",

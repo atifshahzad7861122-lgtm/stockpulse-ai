@@ -293,7 +293,8 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
         <Modal open onClose={() => setConfirm(null)} title="Reject opportunity"
           footer={
             <>
-              <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>              <Button variant="danger" disabled={!rejectReason.trim()} loading={muts.reject.isPending}
+              <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
+              <Button variant="danger" disabled={!rejectReason.trim()} loading={muts.reject.isPending}
                 onClick={() => { muts.reject.mutate({ id: opp.id, reason: rejectReason.trim() }); setConfirm(null); }}>
                 Reject
               </Button>
@@ -501,7 +502,95 @@ function OpportunityRecommendationsPanel({ opportunityId }: { opportunityId: str
           const mine = rows.filter((r) => r.opportunity_id === opportunityId);
           if (!mine.length)
             return <EmptyState compact title="No recommendations for this opportunity" description="It has not been picked up by the daily planner yet." />;
-          return (            <ul className="space-y-2.5">
+          return (
+            <ul className="space-y-2.5">
+              {mine.map((r) => (
+                <RecommendationDetailCard key={r.id} rec={r} busy={busy} muts={muts} />
+              ))}
+            </ul>
+          );
+        }}
+      </QueryView>
+    </Panel>
+  );
+}
+
+function RecommendationDetailCard({
+  rec,
+  busy,
+  muts,
+}: {
+  rec: ProductionRecommendation;
+  busy: boolean;
+  muts: ReturnType<typeof useProductionRecommendationMutations>;
+}) {
+  const [showEvidence, setShowEvidence] = useState(false);
+  return (
+    <li className="rounded-lg border border-border bg-bg-secondary p-3.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge tone="accent">{rec.asset_type.toUpperCase()}</Badge>
+        {rec.category && <Badge tone="neutral">{rec.category}</Badge>}
+        {rec.micro_niche_name && <Badge tone="info">{rec.micro_niche_name}</Badge>}
+        <Badge tone={rec.status === "approved" ? "success" : rec.status === "recommended" ? "warning" : "muted"}>{enumLabel(rec.status)}</Badge>
+      </div>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">{rec.reason}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-text-secondary">
+        <span>Score <strong className="text-text-primary" style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(rec.unified_score)}</strong></span>
+        {rec.personal_fit === null || rec.personal_fit === undefined ? (
+          <span className="text-text-muted">Personal fit: N/A — private data not connected</span>
+        ) : (
+          <span>Personal fit <strong className="text-text-primary">{Math.round(rec.personal_fit)}</strong></span>
+        )}
+        <ConfidenceMeter value={rec.confidence} compact />
+        <span>Make <strong className="text-text-primary" style={{ fontVariantNumeric: "tabular-nums" }}>{rec.recommended_quantity}</strong></span>
+        {(rec.evidence?.length ?? 0) > 0 && (
+          <button onClick={() => setShowEvidence((s) => !s)} aria-expanded={showEvidence} className="text-text-muted underline-offset-2 hover:text-text-secondary hover:underline">
+            {showEvidence ? "Hide evidence" : `Why? (${rec.evidence!.length} signals)`}
+          </button>
+        )}
+      </div>
+      {showEvidence && (
+        <div className="mt-2.5">
+          <EvidenceList evidence={rec.evidence} />
+        </div>
+      )}
+      <div className="mt-2.5 flex gap-1.5">
+        {rec.status === "recommended" && (
+          <>
+            <Button size="sm" variant="primary" icon={<Check size={13} />} loading={muts.approve.isPending} disabled={busy} onClick={() => muts.approve.mutate(rec.id)}>Approve</Button>
+            <Button size="sm" variant="outline" loading={muts.reject.isPending} disabled={busy} onClick={() => muts.reject.mutate({ id: rec.id })}>Reject</Button>
+          </>
+        )}
+        {rec.status !== "archived" && (
+          <Button size="sm" variant="ghost" loading={muts.archive.isPending} disabled={busy} onClick={() => muts.archive.mutate(rec.id)}>Archive</Button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Prompt packs attached to this opportunity, with export download.
+// ---------------------------------------------------------------------------
+
+function PromptPacksPanel({ opportunityId }: { opportunityId: string }) {
+  const packs = usePromptPacks({ retry: false });
+  const exporter = usePromptPackExport();
+
+  return (
+    <Panel title="Prompt packs">
+      <QueryView
+        query={packs}
+        loading={<Skeleton lines={3} />}
+        empty={<EmptyState compact icon={<FileText size={18} />} title="No prompt packs yet" description="Prompt packs are bundles of generation-ready prompts the planner can attach to an opportunity." />}
+        errorTitle="Prompt packs unavailable"
+      >
+        {(rows) => {
+          const mine = rows.filter((p) => p.opportunity_id === opportunityId);
+          if (!mine.length)
+            return <EmptyState compact icon={<FileText size={18} />} title="No prompt packs for this opportunity" description="Generate prompts from a concept in Prompt Studio first." />;
+          return (
+            <ul className="space-y-2.5">
               {mine.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-border bg-bg-secondary px-3.5 py-3">
                   <FileText size={15} className="shrink-0 text-text-muted" aria-hidden />
@@ -797,7 +886,8 @@ function AssetAnalysisResult({
       analysis.prompt_c,
       "",
       "NEGATIVE PROMPT",
-      analysis.negative_prompt,    ].join("\n");
+      analysis.negative_prompt,
+    ].join("\n");
     onCopy("all", all, "Concept and all prompts copied.");
   };
 

@@ -316,6 +316,7 @@ function PredictionSignalsPanel() {
     </Panel>
   );
 }
+
 function QueueSnapshotPanel() {
   const queue = useQueue({ page_size: 100 });
   return (
@@ -632,7 +633,8 @@ function MarketSummaryPanel() {
     >
       {sources.isLoading || runs.isLoading ? (
         <Skeleton lines={3} />
-      ) : sources.isError || runs.isError ? (        <EmptyState compact title="Market data unavailable" description="The data layer could not be reached." />
+      ) : sources.isError || runs.isError ? (
+        <EmptyState compact title="Market data unavailable" description="The data layer could not be reached." />
       ) : (
         (() => {
           const rows = sources.data ?? [];
@@ -928,7 +930,7 @@ export default function DashboardPage() {
         <MarketSummaryPanel />
       </div>
 
-         <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <OpportunityListPanel title="Today's opportunities" href="/opportunities" />
         <RisingCategoriesPanel />
       </div>
@@ -937,6 +939,7 @@ export default function DashboardPage() {
         <OpportunityListPanel title="Top image opportunities" href="/opportunities" formats={["image"]} />
         <OpportunityListPanel title="Top video opportunities" href="/opportunities" formats={["video"]} />
       </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PredictionSignalsPanel />
         <CapacityPanel />

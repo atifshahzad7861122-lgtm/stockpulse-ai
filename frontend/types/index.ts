@@ -416,7 +416,8 @@ export interface SimilarityRecord {
 export interface SimilarityCheckResult extends WithProvenance {
   id: string;
   subject: ComplianceSubject;
-  risk_level: RiskLevel;  records: SimilarityRecord[];
+  risk_level: RiskLevel;
+  records: SimilarityRecord[];
   created_at: string;
 }
 
@@ -834,7 +835,8 @@ export interface AdobeConnection {
   required_config: (string | AdobeConnectionStep)[] | null;
   last_sync: string | null;
   error: string | null;
-  configured?: boolean;  session_type?: string | null;
+  configured?: boolean;
+  session_type?: string | null;
 }
 
 /** Body for PUT /api/private/connection — server-side only, never echoed. */

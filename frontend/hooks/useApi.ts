@@ -391,6 +391,7 @@ export function usePromptVersions(id: string | null) {
     ...DETAIL,
   });
 }
+
 export function usePromptMutations() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -771,6 +772,7 @@ export function useRequestExport() {
     onError: toastOnError(toast),
   });
 }
+
 // ---------------------------------------------------------------- Agents
 
 export function useAgents(opts?: QueryOpts<AgentDefinition[]>) {
@@ -783,7 +785,7 @@ export function useAgents(opts?: QueryOpts<AgentDefinition[]>) {
 }
 
 export function useAgentJobs(
-  params: { status?: JobStatus | string; agent?: AgentName | string; run_kind?: AgentRunKind | string } = {},
+  params: { status?: JobStatus | string; agent?: AgentName | string; run_kind?: AgentRunKind | string } & ListParams = {},
   opts?: QueryOpts<Page<AgentJob>>,
 ) {
   return useQuery<Page<AgentJob>, ApiClientError>({
@@ -932,7 +934,7 @@ export function useLibraryMutations() {
   const qc = useQueryClient();
   return {
     save: useMutation({
-      mutationFn: (v: { item_kind: SavedItemKind; item_id: string }) => api.library.save(v),
+      mutationFn: (v: { item_kind: SavedItemKind; item_id: string; note?: string }) => api.library.save(v),
       onSuccess: () => {
         toast({ title: "Saved to library", tone: "success" });
         qc.invalidateQueries({ queryKey: ["library"] });
@@ -1145,6 +1147,7 @@ export function usePersonalCategories(
     ...opts,
   });
 }
+
 export function useContentTypes(opts?: QueryOpts<ContentTypesResponse>) {
   return useQuery<ContentTypesResponse, ApiClientError>({
     queryKey: qk.personal.contentTypes,
