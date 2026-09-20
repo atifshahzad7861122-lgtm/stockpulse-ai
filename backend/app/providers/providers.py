@@ -1,12 +1,15 @@
 """Provider abstractions (docs: 15_TREND_INTELLIGENCE §2, 31_INTEGRATION_SPECIFICATION).
 
+
 Env-var-driven selection with MOCK default:
     STOCKPULSE_TREND_PROVIDER=mock   (mock | <future real adapter>)
     STOCKPULSE_LLM_PROVIDER=mock     (mock | ollama)
     STOCKPULSE_GENERATION_PROVIDER=mock   (mock | muse)
 
+
 v1 ships mock providers (deterministic, labeled MOCK, no network calls, no
 credentials) plus OllamaLLMProvider — a LOCAL LLM via the Ollama REST API.
+
 
 The "muse" generation provider is EXPORT-ONLY: it writes the prompt pack to
 a local export file and returns its URI honestly labeled "export only —
@@ -17,15 +20,21 @@ The user generates the asset themselves in muse AI (or any tool).
 Real adapters beyond these are a future integration (docs/31).
 """
 
+
 from __future__ import annotations
+
 
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+
 PROVENANCE_MOCK = "MOCK"
 PROVENANCE_LOCAL = "LOCAL"  # Ollama: inference ran on this machine, not a vendor API
+PROVENANCE_THIRD_PARTY = "THIRD_PARTY"  # vendor API inference (e.g. Gemini): real model, external service
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -33,9 +42,12 @@ PROVENANCE_LOCAL = "LOCAL"  # Ollama: inference ran on this machine, not a vendo
 # ---------------------------------------------------------------------------
 
 
+
+
 @dataclass(frozen=True)
 class TrendSnapshotPayload:
     """Normalized provider output for one topic (docs/15 §3)."""
+
 
     topic: str
     value_w0: float
@@ -46,16 +58,21 @@ class TrendSnapshotPayload:
     source_id: str = "mock"
 
 
+
+
 class TrendProvider(ABC):
     """Source adapter: pull and normalize trend data (docs/13 §3, 15 §2)."""
 
+
     name: str = "base"
     provenance: str = PROVENANCE_MOCK
+
 
     @abstractmethod
     def fetch_topics(self, topics: list[str], window_days: int = 7) -> list[TrendSnapshotPayload]:
         """Return normalized per-topic snapshot payloads for the given window."""
         raise NotImplementedError
+
 
     @abstractmethod
     def health(self) -> dict:
@@ -427,6 +444,182 @@ class OllamaLLMProvider(LLMProvider):
         }
 
 
+class GeminiLLMProvider(LLMProvider):
+    """Real LLM via Google's Gemini API (v1beta generateContent).
+
+    Selection:
+        STOCKPULSE_LLM_PROVIDER=gemini
+        GEMINI_API_KEY=<key from https://aistudio.google.com/apikey>  (required)
+        GEMINI_MODEL=gemini-2.0-flash    (default; any generateContent-capable model)
+        LLM_TIMEOUT_SECONDS=120          (default; generation timeout)
+
+    This is the first REAL (non-mock, non-local) LLM provider: agent drafts
+    (ideation angles, prompt text, metadata, summaries, briefings) are produced
+    by the vendor model instead of deterministic templates. Responses are
+    labeled THIRD_PARTY so downstream code never mistakes them for verified
+    data.
+
+    Honesty contract (same as Ollama):
+    - generate() RAISES a clear RuntimeError when the key is missing, the API
+      errors, or the response shape is unexpected — it NEVER returns fake text
+      as if the model had answered. Callers fall back to deterministic text.
+    - health() NEVER raises (never blocks app startup); it performs a free
+      `models.list` call that validates the key without spending tokens.
+    - The model DRAFTS; the human keeps final decisions on originality,
+      rights, quality, metadata truthfulness and submission. Task instructions
+      forbid guarantee language ("will sell", rankings, sales numbers).
+
+    Privacy note: unlike Ollama, prompts DO leave the machine (Google's API).
+    Prefer the ollama provider for contexts containing private USER_PROVIDED
+    data; the ideation/fusion callers already keep prompts to market-level
+    context.
+    """
+
+    name = "gemini"
+    provenance = PROVENANCE_THIRD_PARTY
+    _BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+
+    _TASK_INSTRUCTIONS = {
+        "ideate": (
+            "Brainstorm original commercial-stock concept angles from the given niche. "
+            "Each concept must be a genuinely new composition, not a reskin of existing "
+            "stock; flag any angle that risks copying another contributor's work."
+        ),
+        "draft_prompt": (
+            "Draft an original image-generation prompt (primary + one alternative "
+            "viewpoint + negative terms). It must describe an original scene — never "
+            "instruct recreating a specific existing artwork or photograph."
+        ),
+        "draft_metadata": (
+            "Draft title and keywords for a stock asset. Keywords must truthfully "
+            "describe what is actually in the image; never invent subjects, locations "
+            "or properties not present."
+        ),
+        "summarize": "Summarize the provided items concisely and factually.",
+        "briefing": (
+            "Write a short daily briefing from the provided counts. Do not invent "
+            "numbers; report only what the context contains."
+        ),
+        "explain": (
+            "Explain in plain language why the given opportunity scored the way it "
+            "did, citing only the evidence provided. Never promise sales, rankings, "
+            "or any guaranteed outcome."
+        ),
+    }
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        self.model = model or os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+        self.timeout = timeout if timeout is not None else float(os.environ.get("LLM_TIMEOUT_SECONDS", "120"))
+
+    def _client(self):
+        import httpx  # project dependency (requirements.txt); local import keeps module import cheap
+
+        return httpx.Client(
+            base_url=self._BASE_URL,
+            headers={"x-goog-api-key": self.api_key},
+            timeout=self.timeout,
+        )
+
+    def _system_prompt(self, task: str) -> str:
+        instruction = self._TASK_INSTRUCTIONS.get(task, f"Perform the task '{task}' helpfully.")
+        return (
+            "You are StockPulse's drafting assistant for an Adobe Stock contributor. "
+            "Automate repetition, never judgment: you draft, the human keeps final decisions "
+            "on originality, rights, quality, metadata truthfulness and submission. "
+            "Never promise sales, rankings, or guaranteed outcomes; predictions are "
+            "probabilistic estimates, never certainties. "
+            f"Task instruction: {instruction}"
+        )
+
+    def generate(self, request: LLMRequest) -> LLMResponse:
+        import json as _json
+
+        if not self.api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY is not set. Create a free key at "
+                "https://aistudio.google.com/apikey and set STOCKPULSE_LLM_PROVIDER=gemini "
+                "with GEMINI_API_KEY in the backend environment."
+            )
+        context_json = _json.dumps(request.context, default=str)
+        payload = {
+            "systemInstruction": {"parts": [{"text": self._system_prompt(request.task)}]},
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": (
+                                f"Task: {request.task}\nContext (JSON):\n{context_json}\n"
+                                "Respond with plain text only (no markdown code fences)."
+                            )
+                        }
+                    ],
+                }
+            ],
+            "generationConfig": {
+                "maxOutputTokens": request.max_tokens,
+                "temperature": 0.7,
+            },
+        }
+        try:
+            with self._client() as client:
+                resp = client.post(f"/models/{self.model}:generateContent", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+        except Exception as exc:
+            raise RuntimeError(f"Gemini API call failed (model '{self.model}'): {exc}") from exc
+        try:
+            parts = data["candidates"][0]["content"]["parts"]
+            text = "".join(p.get("text", "") for p in parts).strip()
+        except (KeyError, IndexError, TypeError, AttributeError) as exc:
+            raise RuntimeError(f"Gemini returned an unexpected response shape: {exc}") from exc
+        if not text:
+            # Empty candidate (e.g. all blocked by safety filters) is not a usable draft.
+            raise RuntimeError(
+                "Gemini returned an empty response (candidates present but no text). "
+                "The prompt may have been blocked by safety filters."
+            )
+        usage = data.get("usageMetadata", {}) or {}
+        tokens = int(usage.get("totalTokenCount") or 0)
+        return LLMResponse(
+            text=text,
+            model=f"gemini/{self.model}",
+            provenance=self.provenance,
+            tokens_used=tokens,
+        )
+
+    def health(self) -> dict:
+        checked_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        if not self.api_key:
+            return {
+                "status": "FAILED",
+                "detail": "GEMINI_API_KEY is not set (never blocks app startup).",
+                "checked_at": checked_at,
+            }
+        try:
+            with self._client() as client:
+                # models.list is free (no tokens) and validates the key.
+                resp = client.get("/models", params={"pageSize": 1}, timeout=10.0)
+                resp.raise_for_status()
+        except Exception as exc:
+            return {
+                "status": "FAILED",
+                "detail": f"Gemini API not reachable or key invalid: {exc}.",
+                "checked_at": checked_at,
+            }
+        return {
+            "status": "OK",
+            "detail": f"Gemini API reachable; model '{self.model}' configured (vendor inference).",
+            "checked_at": checked_at,
+        }
+
+
 class MockGenerationProvider(GenerationProvider):
     """Mock media generator: registers a placeholder asset record, renders nothing."""
 
@@ -557,7 +750,9 @@ def get_llm_provider() -> LLMProvider:
         return MockLLMProvider()
     if name == "ollama":
         return OllamaLLMProvider()
-    raise ValueError(f"Unknown LLM provider '{name}' (supported: 'mock', 'ollama')")
+    if name == "gemini":
+        return GeminiLLMProvider()
+    raise ValueError(f"Unknown LLM provider '{name}' (supported: 'mock', 'ollama', 'gemini')")
 
 
 def get_generation_provider() -> GenerationProvider:
