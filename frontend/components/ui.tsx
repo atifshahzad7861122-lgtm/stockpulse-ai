@@ -54,13 +54,13 @@ const BTN_VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "bg-accent-primary text-[#171307] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_20px_-8px_rgba(214,178,94,0.45)] hover:bg-accent-secondary",
   secondary:
-    "bg-surface-elevated text-text-primary border border-border shadow-depth1 hover:border-border-strong hover:bg-[#202027]",
-  ghost: "text-text-secondary hover:text-text-primary hover:bg-white/[0.04]",
+    "bg-surface-elevated text-text-primary border border-border shadow-depth1 hover:border-border-strong hover:brightness-110",
+  ghost: "text-text-secondary hover:text-text-primary hover:bg-text-primary/[0.04]",
   // Racing red — alerts / destructive only.
   danger:
     "bg-status-danger text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_8px_20px_-8px_rgba(225,6,0,0.5)] hover:brightness-110",
   outline:
-    "border border-border-strong text-text-secondary hover:text-text-primary hover:border-text-muted hover:bg-white/[0.03]",
+    "border border-border-strong text-text-secondary hover:text-text-primary hover:border-text-muted hover:bg-text-primary/[0.03]",
 };
 
 const BTN_SIZES: Record<ButtonSize, string> = {
@@ -148,9 +148,9 @@ const BADGE_CLASSES: Record<BadgeTone, string> = {
   warning: "chip-warning",
   danger: "chip-danger",
   info: "chip-info",
-  muted: "bg-white/[0.05] text-text-muted",
+  muted: "bg-text-primary/[0.05] text-text-muted",
   accent: "chip-accent",
-  neutral: "bg-white/[0.05] text-text-secondary",
+  neutral: "bg-text-primary/[0.05] text-text-secondary",
 };
 
 export function Badge({
@@ -293,7 +293,7 @@ export function Tabs({
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="ml-1.5 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-text-secondary tnum">
+              <span className="ml-1.5 rounded bg-text-primary/[0.06] px-1.5 py-0.5 text-[10px] text-text-secondary tnum">
                 {t.count}
               </span>
             )}
@@ -422,7 +422,7 @@ export function Modal({
         <button
           onClick={onClose}
           aria-label="Close dialog"
-          className="rounded-lg p-1.5 text-text-muted hover:bg-white/[0.05] hover:text-text-primary"
+          className="rounded-lg p-1.5 text-text-muted hover:bg-text-primary/[0.05] hover:text-text-primary"
         >
           <X size={16} />
         </button>
@@ -552,7 +552,7 @@ export function Drawer({
               <button
                 onClick={onClose}
                 aria-label="Close drawer"
-                className="rounded-lg p-1.5 text-text-muted hover:bg-white/[0.05] hover:text-text-primary"
+                className="rounded-lg p-1.5 text-text-muted hover:bg-text-primary/[0.05] hover:text-text-primary"
               >
                 <X size={16} />
               </button>
@@ -901,7 +901,7 @@ export function DataTable<T>({
               key={rowKey(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cx(
-                "transition-colors hover:bg-white/[0.025]",
+                "transition-colors hover:bg-text-primary/[0.025]",
                 onRowClick && "cursor-pointer",
               )}
             >
