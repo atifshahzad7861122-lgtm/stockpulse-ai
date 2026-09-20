@@ -1243,6 +1243,7 @@ def seed_demo(session: Session) -> dict[str, int]:
             reference_mood=["documentary", "commercial", "authentic"],
             status=IdeaStatus.READY if i < 5 else IdeaStatus.DRAFT,
             priority=i,
+            data_provenance="MOCK",  # demo seed rows: honestly labeled
         )
         session.add(idea)
         session.flush()
@@ -1281,6 +1282,7 @@ def seed_demo(session: Session) -> dict[str, int]:
             reference_mood=["cinematic", "clean"],
             status=IdeaStatus.READY if i < 3 else IdeaStatus.DRAFT,
             priority=i,
+            data_provenance="MOCK",  # demo seed rows: honestly labeled
         )
         session.add(idea)
         session.flush()
