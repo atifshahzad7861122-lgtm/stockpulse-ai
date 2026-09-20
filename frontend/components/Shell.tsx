@@ -36,6 +36,7 @@ import {
 import { useCommandBarState } from "./providers";
 import { useCommandBarShortcut } from "./CommandBar";
 import { DevModeBanner } from "./DevModeBanner";
+import { ThemeToggle } from "./ThemeToggle";
 import { PageTransition } from "./motion/motion";
 import { useAgentJobs, useComplianceChecks, useNotifications, useQueue } from "../hooks/useApi";
 import { useToast } from "./toast";
@@ -177,7 +178,7 @@ function BellButton() {
         router.push("/agents");
       }}
       aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-      className="relative rounded-lg p-2 text-text-secondary transition-colors hover:bg-white/[0.05] hover:text-text-primary"
+      className="relative rounded-lg p-2 text-text-secondary transition-colors hover:bg-text-primary/[0.05] hover:text-text-primary"
     >
       <Bell size={16} aria-hidden />
       {unread > 0 && (
@@ -239,8 +240,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                     className={cx(
                       "relative mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors",
                       active
-                        ? "bg-white/[0.05] text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                        : "text-text-secondary hover:bg-white/[0.03] hover:text-text-primary",
+                        ? "bg-text-primary/[0.05] text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                        : "text-text-secondary hover:bg-text-primary/[0.03] hover:text-text-primary",
                     )}
                   >
                     <span
@@ -256,7 +257,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                       <span
                         className={cx(
                           "tnum rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                          it.badgeKey === "compliance" ? "chip-warning" : "bg-white/[0.07] text-text-secondary",
+                          it.badgeKey === "compliance" ? "chip-warning" : "bg-text-primary/[0.07] text-text-secondary",
                         )}
                       >
                         {badge > 99 ? "99+" : badge}
@@ -288,12 +289,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setOpen(true)}
             aria-label="Open search"
-            className="ml-auto rounded-lg p-2 text-text-secondary hover:bg-white/[0.05] hover:text-text-primary sm:hidden"
+            className="ml-auto rounded-lg p-2 text-text-secondary hover:bg-text-primary/[0.05] hover:text-text-primary sm:hidden"
           >
             <Search size={16} aria-hidden />
           </button>
           <BriefingPill />
           <BellButton />
+          <ThemeToggle />
         </header>
 
         {/* Main content */}
