@@ -10,13 +10,14 @@ from app.agents import _base
 from app.models.ideation import ImageIdea, VideoIdea
 from app.models.intelligence import Opportunity
 from app.models.platform import AgentRun
-from app.providers.providers import LLMRequest, get_llm_provider
+from app.providers.providers import LLMRequest, PROVENANCE_MOCK, get_llm_provider
 from app.schemas.enums import IdeaStatus
 
 
 def _generate_concepts(
     kind: str, opportunity: Opportunity, count: int, db: Session, run: AgentRun
-) -> list[dict]:
+) -> tuple[list[dict], str, str]:
+    """Returns (concepts, provenance, model) — labels always match the provider used."""
     llm = get_llm_provider()
     response = llm.generate(
         LLMRequest(
@@ -30,6 +31,17 @@ def _generate_concepts(
             },
         )
     )
+    if response.provenance == PROVENANCE_MOCK:
+        notes = (
+            "Mock-generated concept; differentiators documented in concept text. "
+            "Run an originality scan before production."
+        )
+    else:
+        notes = (
+            f"Drafted with {response.model} ({response.provenance}); differentiators "
+            "documented in concept text. Human review + originality scan required "
+            "before production."
+        )
     concepts = []
     for i, line in enumerate(response.text.split("\n")):
         line = line.strip()
@@ -38,13 +50,10 @@ def _generate_concepts(
                 {
                     "title": f"{opportunity.title} — concept {i + 1}",
                     "concept": line,
-                    "originality_notes": (
-                        "Mock-generated concept; differentiators documented in concept text. "
-                        "Run an originality scan before production."
-                    ),
+                    "originality_notes": notes,
                 }
             )
-    return concepts
+    return concepts, response.provenance, response.model
 
 
 def run_image(db: Session, run: AgentRun, input: dict[str, Any]) -> dict[str, Any]:
@@ -70,8 +79,11 @@ def _run_kind(db: Session, run: AgentRun, input: dict[str, Any], kind: str) -> d
         }
 
     created = 0
+    provenance = PROVENANCE_MOCK
+    model = "mock-llm-template-v1"
     for opp in opportunities:
-        for c in _generate_concepts(kind, opp, count, db, run)[:count]:
+        concepts, provenance, model = _generate_concepts(kind, opp, count, db, run)
+        for c in concepts[:count]:
             kwargs: dict[str, Any] = {
                 "opportunity_id": opp.id,
                 "micro_niche_id": opp.micro_niche_id,
@@ -104,10 +116,17 @@ def _run_kind(db: Session, run: AgentRun, input: dict[str, Any], kind: str) -> d
             created += 1
     db.commit()
     _base.info(db, run, f"Created {created} {kind} ideas (DRAFT — human review required)")
+    if provenance == PROVENANCE_MOCK:
+        note = "Ideas are DRAFT and require human review. " + _base.MOCK_NOTE
+    else:
+        note = (
+            "Ideas are DRAFT and require human review. "
+            f"Drafted with {model} ({provenance}) — not verified market data."
+        )
     return {
         "kind": kind,
         "ideas_created": created,
         "opportunities_used": len(opportunities),
-        "provenance": "MOCK",
-        "note": "Ideas are DRAFT and require human review. " + _base.MOCK_NOTE,
+        "provenance": provenance,
+        "note": note,
     }
