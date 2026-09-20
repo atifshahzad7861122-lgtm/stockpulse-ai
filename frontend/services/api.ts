@@ -15,6 +15,7 @@ import type {
   AnalyticsFunnel,
   AnalyticsOverview,
   Asset,
+  AssetAnalysis,
   AssetRegistration,
   AssetType,
   AssetVersion,
@@ -35,6 +36,7 @@ import type {
   IdeaStatus,
   JobAccepted,
   JobStatus,
+  MarketIntelligenceOverview,
   MetadataBundle,
   MetadataValidation,
   MicroNiche,
@@ -567,6 +569,39 @@ export const api = {
     /** POST /api/prompt-packs/{id}/export → download payload. */
     exportPack: (id: string) =>
       post<{ id: string; name: string; content: string; mime_type?: string }>(`/prompt-packs/${id}/export`, {}, true),
+  },
+
+  // Market intelligence overview (product simplification)
+  marketIntelligence: {
+    /** GET /api/market-intelligence/overview → real collection-derived signals. */
+    overview: () => get<MarketIntelligenceOverview>("/market-intelligence/overview"),
+  },
+
+  // Asset analysis — original prompt generation per opportunity (product simplification)
+  assetAnalysis: {
+    /**
+     * POST /api/asset-analysis/generate {opportunity_id, asset_type} → 202 job.
+     * Same JobAccepted shape as POST /api/prompts/generate; poll via GET /agents/jobs/{job_id}.
+     */
+    generate: (body: { opportunity_id: string; asset_type: "image" | "video" }) =>
+      post<JobAccepted>("/asset-analysis/generate", body, true),
+    /**
+     * GET /api/asset-analysis/by-opportunity/{id}?asset_type=… → completed analysis.
+     * A 404 is the honest "no analysis yet for this asset type" state → null.
+     */
+    byOpportunity: async (
+      opportunityId: string,
+      assetType: "image" | "video",
+    ): Promise<AssetAnalysis | null> => {
+      try {
+        return await get<AssetAnalysis>(
+          `/asset-analysis/by-opportunity/${opportunityId}${qs({ asset_type: assetType })}`,
+        );
+      } catch (e) {
+        if (e instanceof ApiClientError && e.status === 404) return null;
+        throw e;
+      }
+    },
   },
 };
 

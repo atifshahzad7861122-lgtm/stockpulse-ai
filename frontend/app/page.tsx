@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import {
   Badge,
-  Banner,
   Button,
   EmptyState,
   KpiCard,
@@ -40,6 +39,7 @@ import {
   useAgentJobs,
   useAnalyticsOverview,
   useComplianceChecks,
+  useMarketIntelligenceOverview,
   useOpportunities,
   useQueue,
   useRefreshTrends,
@@ -57,8 +57,8 @@ import {
   isLiveHealth,
   lastSuccessOf,
 } from "../components/sources";
-import type { Opportunity, QueueStatus } from "../types";
-import { daysAgoISO, fmtInt, fmtPct01, timeAgo, todayISO } from "../lib/format";
+import type { MarketMomentum, MarketSignalLevel, Opportunity, QueueStatus } from "../types";
+import { daysAgoISO, enumLabel, fmtDate, fmtInt, fmtPct01, timeAgo, todayISO } from "../lib/format";
 import { stateLabel } from "../lib/transitions";
 
 // ---------------------------------------------------------------- Hero strip
@@ -316,7 +316,6 @@ function PredictionSignalsPanel() {
     </Panel>
   );
 }
-
 function QueueSnapshotPanel() {
   const queue = useQueue({ page_size: 100 });
   return (
@@ -633,8 +632,7 @@ function MarketSummaryPanel() {
     >
       {sources.isLoading || runs.isLoading ? (
         <Skeleton lines={3} />
-      ) : sources.isError || runs.isError ? (
-        <EmptyState compact title="Market data unavailable" description="The data layer could not be reached." />
+      ) : sources.isError || runs.isError ? (        <EmptyState compact title="Market data unavailable" description="The data layer could not be reached." />
       ) : (
         (() => {
           const rows = sources.data ?? [];
@@ -667,6 +665,247 @@ function MarketSummaryPanel() {
   );
 }
 
+// ---------------------------------------------------------------- Market intelligence (product simplification)
+//
+// Answers WHAT IS TRENDING / RISING / TOP IMAGE+VIDEO TOPICS / KEYWORDS /
+// 7D vs 30D from GET /api/market-intelligence/overview — real collection data
+// only. Never shows mock rows as real.
+
+const SIGNAL_TONE: Record<MarketSignalLevel, "success" | "warning" | "muted"> = {
+  HIGH: "success",
+  MEDIUM: "warning",
+  LOW: "muted",
+};
+
+const MOMENTUM_TONE: Record<MarketMomentum, "success" | "muted" | "warning" | "danger"> = {
+  STRONGLY_RISING: "success",
+  RISING: "success",
+  STABLE: "muted",
+  DECLINING: "warning",
+  STRONGLY_DECLINING: "danger",
+};
+
+function SignalPair({ s7, s30 }: { s7: MarketSignalLevel; s30: MarketSignalLevel }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      <Badge tone={SIGNAL_TONE[s7]}>7D {s7}</Badge>
+      <Badge tone={SIGNAL_TONE[s30]}>30D {s30}</Badge>
+    </span>
+  );
+}
+
+function MomentumBadge({ momentum }: { momentum: MarketMomentum }) {
+  const arrow =
+    momentum === "STRONGLY_RISING"
+      ? "▲▲"
+      : momentum === "RISING"
+        ? "▲"
+        : momentum === "DECLINING"
+          ? "▼"
+          : momentum === "STRONGLY_DECLINING"
+            ? "▼▼"
+            : "—";
+  return (
+    <Badge tone={MOMENTUM_TONE[momentum]}>
+      {arrow} {enumLabel(momentum)}
+    </Badge>
+  );
+}
+
+function MovementCell({ v }: { v: number | null | undefined }) {
+  if (v === null || v === undefined)
+    return <span className="text-text-muted">—</span>;
+  const cls = v > 0 ? "text-status-success" : v < 0 ? "text-status-danger" : "text-text-muted";
+  return (
+    <span className={cx("tnum", cls)}>
+      {v > 0 ? "▲" : v < 0 ? "▼" : "—"} {Math.abs(Math.round(v))}
+    </span>
+  );
+}
+
+function MiSectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="micro-label mb-2">{children}</p>;
+}
+
+function MarketIntelligenceSection() {
+  const ov = useMarketIntelligenceOverview();
+
+  return (
+    <Panel
+      title="Market Intelligence"
+      action={<Link href="/trends" className="text-xs text-accent-secondary hover:underline">Trend Explorer</Link>}
+      className="border-l-2 border-l-accent-primary"
+    >
+      <QueryView
+        query={ov}
+        loading={<Skeleton lines={6} />}
+        errorTitle="Market intelligence unavailable"
+      >
+        {(o) => {
+          const noData =
+            !o.last_data_update &&
+            !o.top_categories.length &&
+            !o.top_image_topics.length &&
+            !o.top_video_topics.length &&
+            !o.top_keywords.length;
+          if (noData)
+            return (
+              <EmptyState
+                title="No real market data yet"
+                description="No real market data yet — run a collection from Data Sources."
+                action={<Link href="/sources"><Button size="sm">Data Sources</Button></Link>}
+              />
+            );
+          return (
+            <div className="space-y-5">
+              {/* Freshness — prominent */}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-bg-secondary px-4 py-2.5">
+                <span className="h-2 w-2 rounded-full bg-status-success" aria-hidden />
+                <p className="text-[13px] text-text-secondary">
+                  Last data update:{" "}
+                  <strong className="text-text-primary">
+                    {o.last_data_update ? timeAgo(o.last_data_update) : "never"}
+                  </strong>
+                  {o.last_data_update && (
+                    <span className="ml-1 text-text-muted">({fmtDate(o.last_data_update)})</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Top categories */}
+              {o.top_categories.length > 0 && (
+                <div>
+                  <MiSectionLabel>Top categories</MiSectionLabel>
+                  <ul className="space-y-1.5">
+                    {o.top_categories.map((c) => (
+                      <li key={c.slug} className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-bg-secondary px-3 py-2">
+                        <span className="min-w-0 flex-1 basis-40 text-[13px] font-medium text-text-primary">{c.name}</span>
+                        <SignalPair s7={c.signal_7d} s30={c.signal_30d} />
+                        <MomentumBadge momentum={c.momentum} />
+                        <ProvenanceBadge provenance={c.provenance} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Top image / video topics */}
+              {(o.top_image_topics.length > 0 || o.top_video_topics.length > 0) && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {[
+                    { label: "Top image topics", rows: o.top_image_topics },
+                    { label: "Top video topics", rows: o.top_video_topics },
+                  ].map(
+                    (g) =>
+                      g.rows.length > 0 && (
+                        <div key={g.label}>
+                          <MiSectionLabel>{g.label}</MiSectionLabel>
+                          <ul className="space-y-2">
+                            {g.rows.map((t) => (
+                              <li key={t.topic} className="rounded-md border border-border bg-bg-secondary px-3 py-2.5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="min-w-0 flex-1 basis-40 text-[13px] font-semibold text-text-primary">{t.topic}</span>
+                                  <Badge tone="neutral">{t.category}</Badge>
+                                  <SignalPair s7={t.signal_7d} s30={t.signal_30d} />
+                                </div>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                  <MomentumBadge momentum={t.momentum} />
+                                  <ProvenanceBadge provenance={t.provenance} />
+                                  {t.keywords.slice(0, 5).map((k) => (
+                                    <span key={k} className="rounded-full bg-text-primary/[0.06] px-2 py-0.5 text-[11px] text-text-secondary">
+                                      {k}
+                                    </span>
+                                  ))}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ),
+                  )}
+                </div>
+              )}
+
+              {/* Top keywords */}
+              {o.top_keywords.length > 0 && (
+                <div>
+                  <MiSectionLabel>Top keywords</MiSectionLabel>
+                  <ul className="space-y-1.5">
+                    {o.top_keywords.map((k) => (
+                      <li key={k.keyword} className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-bg-secondary px-3 py-2 text-[13px]">
+                        <span className="min-w-0 flex-1 basis-32 font-medium text-text-primary">{k.keyword}</span>
+                        <span className="text-text-secondary">
+                          <span className="tnum font-semibold text-text-primary">{fmtInt(k.frequency)}</span>{" "}
+                          <span className="text-text-muted">mentions</span>
+                        </span>
+                        <span className="flex items-center gap-3 text-xs text-text-muted">
+                          <span>7D <MovementCell v={k.movement_7d} /></span>
+                          <span>30D <MovementCell v={k.movement_30d} /></span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 7D vs 30D comparison */}
+              {o.window_comparison.length > 0 && (
+                <div>
+                  <MiSectionLabel>7-day vs 30-day comparison</MiSectionLabel>
+                  <ul className="space-y-1.5">
+                    {o.window_comparison.map((w) => (
+                      <li key={w.topic} className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-bg-secondary px-3 py-2">
+                        <span className="min-w-0 flex-1 basis-40 text-[13px] font-medium text-text-primary">{w.topic}</span>
+                        <SignalPair s7={w.signal_7d} s30={w.signal_30d} />
+                        <MomentumBadge momentum={w.momentum} />
+                        <span className="shrink-0 text-xs text-text-muted">
+                          trend <strong className="tnum text-text-primary">{Math.round(w.trend_signal)}</strong>/100
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Rising / declining now */}
+              {(o.rising_now.length > 0 || o.declining_now.length > 0) && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {[
+                    { label: "Rising now", rows: o.rising_now, empty: "Nothing rising right now." },
+                    { label: "Declining now", rows: o.declining_now, empty: "Nothing declining right now." },
+                  ].map((g) => (
+                    <div key={g.label}>
+                      <MiSectionLabel>{g.label}</MiSectionLabel>
+                      {g.rows.length ? (
+                        <ul className="space-y-1.5">
+                          {g.rows.map((m) => (
+                            <li key={`${m.topic}-${m.asset_type}`} className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-bg-secondary px-3 py-2 text-[13px]">
+                              <span className="min-w-0 flex-1 basis-32 font-medium text-text-primary">{m.topic}</span>
+                              <Badge tone="neutral">{enumLabel(m.asset_type)}</Badge>
+                              <SignalPair s7={m.signal_7d} s30={m.signal_30d} />
+                              <MomentumBadge momentum={m.momentum} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-text-muted">{g.empty}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-[11px] text-text-muted">
+                Signals are estimated from collected market data — an opportunity, never a guarantee.
+              </p>
+            </div>
+          );
+        }}
+      </QueryView>
+    </Panel>
+  );
+}
+
 // ---------------------------------------------------------------- Page
 
 export default function DashboardPage() {
@@ -678,12 +917,8 @@ export default function DashboardPage() {
         actions={<RunAnalysisButton />}
       />
 
-      <Banner id="provider" tone="warning">
-        <strong className="text-text-primary">Demo data provider.</strong> Figures shown are illustrative placeholders
-        until live sources connect — never treat them as real Adobe Stock data.
-      </Banner>
-
       <CreateTodayHero />
+      <MarketIntelligenceSection />
       <KpiStrip />
 
       <DataLayerStatusPanel />
@@ -693,7 +928,7 @@ export default function DashboardPage() {
         <MarketSummaryPanel />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+         <div className="grid gap-4 lg:grid-cols-2">
         <OpportunityListPanel title="Today's opportunities" href="/opportunities" />
         <RisingCategoriesPanel />
       </div>
@@ -702,7 +937,6 @@ export default function DashboardPage() {
         <OpportunityListPanel title="Top image opportunities" href="/opportunities" formats={["image"]} />
         <OpportunityListPanel title="Top video opportunities" href="/opportunities" formats={["video"]} />
       </div>
-
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PredictionSignalsPanel />
         <CapacityPanel />

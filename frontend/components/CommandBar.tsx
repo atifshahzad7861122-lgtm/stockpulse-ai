@@ -9,18 +9,11 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { overlayTransition } from "./motion/easing";
 import {
-  BarChart3,
-  Bot,
-  CalendarDays,
-  ShieldCheck,
   Compass,
   FileImage,
   FileVideo,
-  HelpCircle,
   Home,
   Image,
-  Layers,
-  Library,
   Lightbulb,
   Play,
   Search,
@@ -51,19 +44,7 @@ const DESTINATIONS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/daily", label: "Daily Intelligence", icon: Sun },
   { href: "/trends", label: "Trend Explorer", icon: Compass },
   { href: "/opportunities", label: "Opportunity Explorer", icon: Lightbulb },
-  { href: "/image-ideas", label: "Image Ideas", icon: FileImage },
-  { href: "/video-ideas", label: "Video Ideas", icon: FileVideo },
-  { href: "/prompt-studio", label: "Prompt Studio", icon: Wand2 },
-  { href: "/compliance", label: "Compliance Center", icon: ShieldCheck },
-  { href: "/similarity", label: "Similarity Center", icon: Layers },
-  { href: "/queue", label: "Production Queue", icon: CalendarDays },
-  { href: "/planner", label: "Submission Planner", icon: CalendarDays },
-  { href: "/metadata", label: "Metadata Studio", icon: Tags },
-  { href: "/library", label: "Content Library", icon: Library },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/agents", label: "AI Agent Center", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/help", label: "Help", icon: HelpCircle },
 ];
 
 export function useCommandBarShortcut() {

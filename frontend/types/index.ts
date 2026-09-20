@@ -416,8 +416,7 @@ export interface SimilarityRecord {
 export interface SimilarityCheckResult extends WithProvenance {
   id: string;
   subject: ComplianceSubject;
-  risk_level: RiskLevel;
-  records: SimilarityRecord[];
+  risk_level: RiskLevel;  records: SimilarityRecord[];
   created_at: string;
 }
 
@@ -835,8 +834,7 @@ export interface AdobeConnection {
   required_config: (string | AdobeConnectionStep)[] | null;
   last_sync: string | null;
   error: string | null;
-  configured?: boolean;
-  session_type?: string | null;
+  configured?: boolean;  session_type?: string | null;
 }
 
 /** Body for PUT /api/private/connection — server-side only, never echoed. */
@@ -1119,4 +1117,139 @@ export interface PromptPackItem {
   prompt_text: string;
   negative_prompt_text?: string | null;
   notes?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Market intelligence overview (GET /api/market-intelligence/overview) +
+// asset-analysis prompt generation (POST /api/asset-analysis/generate)
+// ---------------------------------------------------------------------------
+
+export type MarketSignalLevel = "HIGH" | "MEDIUM" | "LOW";
+export type MarketMomentum =
+  | "STRONGLY_RISING"
+  | "RISING"
+  | "STABLE"
+  | "DECLINING"
+  | "STRONGLY_DECLINING";
+
+export interface MarketIntelligenceCategory {
+  name: string;
+  slug: string;
+  signal_7d: MarketSignalLevel;
+  signal_30d: MarketSignalLevel;
+  momentum: MarketMomentum;
+  frequency: number;
+  sources: string[];
+  last_updated: string | null;
+  provenance: DataProvenance;
+  trend_signal: number;
+  momentum_7d: number;
+  momentum_30d: number;
+}
+
+export interface MarketIntelligenceTopic {
+  topic: string;
+  category: string;
+  signal_7d: MarketSignalLevel;
+  signal_30d: MarketSignalLevel;
+  momentum: MarketMomentum;
+  frequency: number;
+  keywords: string[];
+  sources: string[];
+  last_updated: string | null;
+  provenance: DataProvenance;
+  signal_kind: string;
+  trend_signal: number;
+  momentum_7d: number;
+  momentum_30d: number;
+}
+
+export interface MarketIntelligenceKeyword {
+  keyword: string;
+  frequency: number;
+  movement_7d: number;
+  movement_30d: number;
+  related_category: string | null;
+  related_image_topics: string[];
+  related_video_topics: string[];
+  source: string | null;
+}
+
+export interface MarketIntelligenceMover {
+  topic: string;
+  asset_type: string;
+  momentum: MarketMomentum;
+  signal_7d: MarketSignalLevel;
+  signal_30d: MarketSignalLevel;
+  trend_signal: number;
+}
+
+export interface MarketIntelligenceComparison {
+  topic: string;
+  signal_7d: MarketSignalLevel;
+  signal_30d: MarketSignalLevel;
+  momentum: MarketMomentum;
+  trend_signal: number;
+  momentum_7d: number;
+  momentum_30d: number;
+}
+
+export interface MarketIntelligenceOverview {
+  generated_at: string;
+  last_data_update: string | null;
+  top_categories: MarketIntelligenceCategory[];
+  top_image_topics: MarketIntelligenceTopic[];
+  top_video_topics: MarketIntelligenceTopic[];
+  top_keywords: MarketIntelligenceKeyword[];
+  rising_now: MarketIntelligenceMover[];
+  declining_now: MarketIntelligenceMover[];
+  window_comparison: MarketIntelligenceComparison[];
+}
+
+export interface AssetAnalysisMarketContext {
+  title: string;
+  topic: string;
+  category: string;
+  asset_type: string;
+  signal_7d: MarketSignalLevel;
+  signal_30d: MarketSignalLevel;
+  momentum: MarketMomentum;
+  trend_signal: number;
+  keywords: string[];
+  source: string | null;
+  source_type: string | null;
+  collected_at: string | null;
+  provenance: DataProvenance;
+  signal_kind: string;
+}
+
+export interface AssetAnalysisCommercial {
+  topic: string;
+  category: string;
+  micro_niche: string;
+  primary_keywords: string[];
+  secondary_keywords: string[];
+  commercial_use_case: string;
+  subject: string;
+  environment: string;
+  composition: string;
+  visual_characteristics: string;
+  content_type: string;
+}
+
+export interface AssetAnalysis {
+  id: string;
+  opportunity_id: string;
+  asset_type: string;
+  status: string;
+  market_context: AssetAnalysisMarketContext;
+  commercial_analysis: AssetAnalysisCommercial;
+  original_concept: string;
+  prompt_a: string;
+  prompt_b: string;
+  prompt_c: string;
+  negative_prompt: string;
+  model: string;
+  provenance: DataProvenance;
+  created_at: string;
 }

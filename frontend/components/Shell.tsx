@@ -8,28 +8,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BarChart3,
   Bell,
-  Bot,
-  CalendarDays,
-  ShieldCheck,
   Compass,
   Database,
-  FileImage,
-  FileVideo,
   Activity,
-  HelpCircle,
   History,
   Home,
-  Layers,
-  Library,
   Lightbulb,
   Search,
   Settings,
   Sun,
-  Tags,
-  Wand2,
-  Wallet,
   MoreHorizontal,
   type LucideIcon,
 } from "lucide-react";
@@ -38,7 +26,7 @@ import { useCommandBarShortcut } from "./CommandBar";
 import { DevModeBanner } from "./DevModeBanner";
 import { ThemeToggle } from "./ThemeToggle";
 import { PageTransition } from "./motion/motion";
-import { useAgentJobs, useComplianceChecks, useNotifications, useQueue } from "../hooks/useApi";
+import { useAgentJobs, useNotifications } from "../hooks/useApi";
 import { useToast } from "./toast";
 import { cx } from "./ui";
 
@@ -46,7 +34,6 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  badgeKey?: "queue" | "compliance";
 }
 
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -60,59 +47,24 @@ const NAV: { group: string; items: NavItem[] }[] = [
     ],
   },
   {
-    group: "Ideation",
-    items: [
-      { href: "/image-ideas", label: "Image Ideas", icon: FileImage },
-      { href: "/video-ideas", label: "Video Ideas", icon: FileVideo },
-      { href: "/prompt-studio", label: "Prompt Studio", icon: Wand2 },
-    ],
-  },
-  {
-    group: "Quality",
-    items: [
-      { href: "/compliance", label: "Compliance", icon: ShieldCheck, badgeKey: "compliance" },
-      { href: "/similarity", label: "Similarity", icon: Layers },
-    ],
-  },
-  {
-    group: "Production",
-    items: [
-      { href: "/queue", label: "Queue", icon: CalendarDays, badgeKey: "queue" },
-      { href: "/planner", label: "Planner", icon: CalendarDays },
-      { href: "/metadata", label: "Metadata", icon: Tags },
-      { href: "/library", label: "Library", icon: Library },
-    ],
-  },
-  {
     group: "Data layer",
     items: [
       { href: "/sources", label: "Data Sources", icon: Database },
       { href: "/sources/health", label: "Source Health", icon: Activity },
       { href: "/runs", label: "Collection Runs", icon: History },
-      { href: "/private", label: "Private Performance", icon: Wallet },
-    ],
-  },
-  {
-    group: "Insights",
-    items: [
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/agents", label: "Agents", icon: Bot },
     ],
   },
   {
     group: "System",
-    items: [
-      { href: "/settings", label: "Settings", icon: Settings },
-      { href: "/help", label: "Help", icon: HelpCircle },
-    ],
+    items: [{ href: "/settings", label: "Settings", icon: Settings }],
   },
 ];
 
 const MOBILE_TABS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/daily", label: "Briefing", icon: Sun },
+  { href: "/trends", label: "Trends", icon: Compass },
   { href: "/opportunities", label: "Ideas", icon: Lightbulb },
-  { href: "/queue", label: "Queue", icon: CalendarDays },
   { href: "/settings", label: "More", icon: MoreHorizontal },
 ];
 
@@ -195,17 +147,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const { setOpen } = useCommandBarState();
   useCommandBarShortcut();
 
-  const queue = useQueue({ page_size: 1 }, { retry: false });
-  const compliance = useComplianceChecks({ pending_review: true, page_size: 1 }, { retry: false });
-  const queueDepth = queue.data?.pagination.total ?? 0;
-  const compliancePending = compliance.data?.pagination.total ?? 0;
-
-  const badgeFor = (key?: "queue" | "compliance") => {
-    if (key === "queue" && queueDepth > 0) return queueDepth;
-    if (key === "compliance" && compliancePending > 0) return compliancePending;
-    return 0;
-  };
-
   // Longest-prefix match so nested routes (e.g. /sources/health) highlight
   // only their own nav item, not the parent (e.g. /sources).
   const matches = (href: string) =>
@@ -231,7 +172,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               {g.items.map((it) => {
                 const active = it.href === activeHref;
                 const Icon = it.icon;
-                const badge = badgeFor(it.badgeKey);
                 return (
                   <Link
                     key={it.href}
@@ -253,16 +193,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                     />
                     <Icon size={15} aria-hidden className={active ? "text-accent-primary" : ""} />
                     <span className="flex-1">{it.label}</span>
-                    {badge > 0 && (
-                      <span
-                        className={cx(
-                          "tnum rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                          it.badgeKey === "compliance" ? "chip-warning" : "bg-text-primary/[0.07] text-text-secondary",
-                        )}
-                      >
-                        {badge > 99 ? "99+" : badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })}

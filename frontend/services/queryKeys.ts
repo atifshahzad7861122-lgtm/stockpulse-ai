@@ -111,4 +111,12 @@ export const qk = {
     list: ["prompt-packs", "list"] as const,
     detail: (id: string) => ["prompt-packs", "detail", id] as const,
   },
+  // Product simplification — market intelligence + asset analysis
+  marketIntelligence: {
+    overview: ["market-intelligence", "overview"] as const,
+  },
+  assetAnalysis: {
+    byOpportunity: (opportunityId: string, assetType: string) =>
+      ["asset-analysis", "by-opportunity", opportunityId, assetType] as const,
+  },
 };

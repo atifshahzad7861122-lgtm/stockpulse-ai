@@ -25,6 +25,7 @@ import type {
   AnalyticsFunnel,
   AnalyticsOverview,
   Asset,
+  AssetAnalysis,
   AssetType,
   CapacitySettings,
   Category,
@@ -41,6 +42,7 @@ import type {
   IdeaKind,
   IdeaStatus,
   JobStatus,
+  MarketIntelligenceOverview,
   MetadataBundle,
   Notification,
   NotificationList,
@@ -389,7 +391,6 @@ export function usePromptVersions(id: string | null) {
     ...DETAIL,
   });
 }
-
 export function usePromptMutations() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -770,7 +771,6 @@ export function useRequestExport() {
     onError: toastOnError(toast),
   });
 }
-
 // ---------------------------------------------------------------- Agents
 
 export function useAgents(opts?: QueryOpts<AgentDefinition[]>) {
@@ -783,7 +783,7 @@ export function useAgents(opts?: QueryOpts<AgentDefinition[]>) {
 }
 
 export function useAgentJobs(
-  params: { status?: JobStatus | string; agent?: AgentName | string; run_kind?: AgentRunKind | string } & ListParams = {},
+  params: { status?: JobStatus | string; agent?: AgentName | string; run_kind?: AgentRunKind | string } = {},
   opts?: QueryOpts<Page<AgentJob>>,
 ) {
   return useQuery<Page<AgentJob>, ApiClientError>({
@@ -932,7 +932,7 @@ export function useLibraryMutations() {
   const qc = useQueryClient();
   return {
     save: useMutation({
-      mutationFn: (v: { item_kind: SavedItemKind; item_id: string; note?: string }) => api.library.save(v),
+      mutationFn: (v: { item_kind: SavedItemKind; item_id: string }) => api.library.save(v),
       onSuccess: () => {
         toast({ title: "Saved to library", tone: "success" });
         qc.invalidateQueries({ queryKey: ["library"] });
@@ -1145,7 +1145,6 @@ export function usePersonalCategories(
     ...opts,
   });
 }
-
 export function useContentTypes(opts?: QueryOpts<ContentTypesResponse>) {
   return useQuery<ContentTypesResponse, ApiClientError>({
     queryKey: qk.personal.contentTypes,
@@ -1420,4 +1419,59 @@ export function usePromptPackCreate() {
     },
     onError: toastOnError(toast),
   });
+}
+
+// ---------------------------------------------------------------- Market intelligence + asset analysis (product simplification)
+// ----------------------------------------------------------------
+
+/**
+ * Market intelligence overview — real collection-derived market signals.
+ * Never faked client-side: an empty response is shown as an honest empty state.
+ */
+export function useMarketIntelligenceOverview(opts?: QueryOpts<MarketIntelligenceOverview>) {
+  return useQuery<MarketIntelligenceOverview, ApiClientError>({
+    queryKey: qk.marketIntelligence.overview,
+    queryFn: () => api.marketIntelligence.overview(),
+    retry: false,
+    ...ANALYTICS_Q,
+    ...opts,
+  });
+}
+
+/**
+ * Completed asset analysis for an opportunity + asset type (404 = none yet).
+ * Used for prompt caching: show the existing analysis instead of regenerating.
+ */
+export function useAssetAnalysis(
+  opportunityId: string | null,
+  assetType: "image" | "video",
+  opts?: QueryOpts<AssetAnalysis | null>,
+) {
+  return useQuery<AssetAnalysis | null, ApiClientError>({
+    queryKey: qk.assetAnalysis.byOpportunity(opportunityId ?? "", assetType),
+    queryFn: () => api.assetAnalysis.byOpportunity(opportunityId as string, assetType),
+    enabled: !!opportunityId,
+    retry: false,
+    ...DETAIL,
+    ...opts,
+  });
+}
+
+/** Kick off asset-analysis prompt generation — returns a job to poll (same pattern as prompts). */
+export function useAssetAnalysisGenerate() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const inv = (opportunityId: string, assetType: string) =>
+    qc.invalidateQueries({ queryKey: qk.assetAnalysis.byOpportunity(opportunityId, assetType) });
+  return {
+    generate: useMutation({
+      mutationFn: (v: { opportunity_id: string; asset_type: "image" | "video" }) =>
+        api.assetAnalysis.generate(v),
+      onSuccess: (r) => {
+        toast({ title: "Analysis started", description: `Job ${r.job_id.slice(0, 8)}… — progress is tracked until it finishes.`, tone: "info" });
+      },
+      onError: toastOnError(toast),
+    }),
+    invalidate: inv,
+  };
 }

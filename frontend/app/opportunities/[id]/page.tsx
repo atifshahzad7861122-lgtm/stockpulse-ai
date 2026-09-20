@@ -21,6 +21,7 @@ import {
   QueryView,
   Select,
   Skeleton,
+  Tabs,
   Textarea,
   WhyThis,
 } from "../../../components/ui";
@@ -43,6 +44,8 @@ import {
 } from "../../../components/fusion";
 import {
   useAgentJobs,
+  useAssetAnalysis,
+  useAssetAnalysisGenerate,
   useFusionMutations,
   useFusionScore,
   useIdeas,
@@ -53,14 +56,13 @@ import {
   useIdeaMutations,
   useProductionRecommendationMutations,
   useProductionRecommendations,
-  usePromptMutations,
   usePromptPackExport,
   usePromptPacks,
 } from "../../../hooks/useApi";
 import { useJobPoll } from "../../../hooks/useJobPoll";
 import { enumLabel, fmtPct01, timeAgo } from "../../../lib/format";
 import { isActionable } from "../../../features/opportunities/OpportunityCard";
-import type { FusionEvidence, Idea, Opportunity, ProductionRecommendation } from "../../../types";
+import type { AssetAnalysis, FusionEvidence, Idea, MarketMomentum, MarketSignalLevel, Opportunity, ProductionRecommendation } from "../../../types";
 
 function OpportunityDetailPage() {
   const params = useParams();
@@ -103,7 +105,12 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
   const lib = useLibraryMutations();
   const [confirm, setConfirm] = useState<null | "reject" | "archive">(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [promptIdea, setPromptIdea] = useState<Idea | null>(null);
+  const [assetModalOpen, setAssetModalOpen] = useState(false);
+  const [assetDefault, setAssetDefault] = useState<"image" | "video">("image");
+  const openAssetAnalyzer = (def: "image" | "video" = "image") => {
+    setAssetDefault(def);
+    setAssetModalOpen(true);
+  };
 
   const actionable = isActionable(opp);
   const demo = isMock(opp) || isMock({ provenance: opp.data_provenance });
@@ -135,6 +142,9 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
         }
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="primary" icon={<Wand2 size={13} />} onClick={() => setAssetModalOpen(true)} data-testid="opp-generate-original-prompt">
+              Generate original prompt
+            </Button>
             <Button size="sm" variant="ghost" icon={<Bookmark size={13} />} loading={lib.save.isPending}
               onClick={() => lib.save.mutate({ item_kind: "OPPORTUNITY", item_id: opp.id })}>
               Save
@@ -233,7 +243,7 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
       <CommercialUseCasesPanel opp={opp} />
 
       {/* Concepts (ideas linked to this opportunity) */}
-      <ConceptsPanel opportunityId={opp.id} onCreateIdea={onCreateIdea} onPromptIdea={setPromptIdea} />
+      <ConceptsPanel opportunityId={opp.id} onCreateIdea={onCreateIdea} onPromptIdea={(i) => openAssetAnalyzer(i.kind === "video" ? "video" : "image")} />
 
       {/* Similarity screening (per concept) */}
       <SimilarityPanel opportunityId={opp.id} />
@@ -261,15 +271,15 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
       {/* Footer actions */}
       <Panel title="Actions">
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="primary" icon={<Lightbulb size={13} />} onClick={onCreateIdea}>Save idea</Button>
-          <Button size="sm" variant="outline" icon={<Wand2 size={13} />} onClick={() => router.push("/prompt-studio")}>
-            Open Prompt Studio
+          <Button size="sm" variant="primary" icon={<Wand2 size={13} />} onClick={() => setAssetModalOpen(true)}>
+            Generate original prompt
           </Button>
+          <Button size="sm" variant="outline" icon={<Lightbulb size={13} />} onClick={onCreateIdea}>Save idea</Button>
         </div>
         <p className="mt-2 text-xs text-text-muted">Idea generation is human-initiated — the system never creates ideas on its own.</p>
       </Panel>
 
-      <PromptLinkModal idea={promptIdea} onClose={() => setPromptIdea(null)} />
+      <AssetAnalysisModal open={assetModalOpen} onClose={() => setAssetModalOpen(false)} opportunity={opp} defaultAssetType={assetDefault} />
 
       <ConfirmModal
         open={confirm === "archive"}
@@ -283,8 +293,7 @@ function DetailBody({ opp, onCreateIdea }: { opp: Opportunity; onCreateIdea: () 
         <Modal open onClose={() => setConfirm(null)} title="Reject opportunity"
           footer={
             <>
-              <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
-              <Button variant="danger" disabled={!rejectReason.trim()} loading={muts.reject.isPending}
+              <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>              <Button variant="danger" disabled={!rejectReason.trim()} loading={muts.reject.isPending}
                 onClick={() => { muts.reject.mutate({ id: opp.id, reason: rejectReason.trim() }); setConfirm(null); }}>
                 Reject
               </Button>
@@ -492,95 +501,7 @@ function OpportunityRecommendationsPanel({ opportunityId }: { opportunityId: str
           const mine = rows.filter((r) => r.opportunity_id === opportunityId);
           if (!mine.length)
             return <EmptyState compact title="No recommendations for this opportunity" description="It has not been picked up by the daily planner yet." />;
-          return (
-            <ul className="space-y-2.5">
-              {mine.map((r) => (
-                <RecommendationDetailCard key={r.id} rec={r} busy={busy} muts={muts} />
-              ))}
-            </ul>
-          );
-        }}
-      </QueryView>
-    </Panel>
-  );
-}
-
-function RecommendationDetailCard({
-  rec,
-  busy,
-  muts,
-}: {
-  rec: ProductionRecommendation;
-  busy: boolean;
-  muts: ReturnType<typeof useProductionRecommendationMutations>;
-}) {
-  const [showEvidence, setShowEvidence] = useState(false);
-  return (
-    <li className="rounded-lg border border-border bg-bg-secondary p-3.5">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Badge tone="accent">{rec.asset_type.toUpperCase()}</Badge>
-        {rec.category && <Badge tone="neutral">{rec.category}</Badge>}
-        {rec.micro_niche_name && <Badge tone="info">{rec.micro_niche_name}</Badge>}
-        <Badge tone={rec.status === "approved" ? "success" : rec.status === "recommended" ? "warning" : "muted"}>{enumLabel(rec.status)}</Badge>
-      </div>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary">{rec.reason}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-text-secondary">
-        <span>Score <strong className="text-text-primary" style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(rec.unified_score)}</strong></span>
-        {rec.personal_fit === null || rec.personal_fit === undefined ? (
-          <span className="text-text-muted">Personal fit: N/A — private data not connected</span>
-        ) : (
-          <span>Personal fit <strong className="text-text-primary">{Math.round(rec.personal_fit)}</strong></span>
-        )}
-        <ConfidenceMeter value={rec.confidence} compact />
-        <span>Make <strong className="text-text-primary" style={{ fontVariantNumeric: "tabular-nums" }}>{rec.recommended_quantity}</strong></span>
-        {(rec.evidence?.length ?? 0) > 0 && (
-          <button onClick={() => setShowEvidence((s) => !s)} aria-expanded={showEvidence} className="text-text-muted underline-offset-2 hover:text-text-secondary hover:underline">
-            {showEvidence ? "Hide evidence" : `Why? (${rec.evidence!.length} signals)`}
-          </button>
-        )}
-      </div>
-      {showEvidence && (
-        <div className="mt-2.5">
-          <EvidenceList evidence={rec.evidence} />
-        </div>
-      )}
-      <div className="mt-2.5 flex gap-1.5">
-        {rec.status === "recommended" && (
-          <>
-            <Button size="sm" variant="primary" icon={<Check size={13} />} loading={muts.approve.isPending} disabled={busy} onClick={() => muts.approve.mutate(rec.id)}>Approve</Button>
-            <Button size="sm" variant="outline" loading={muts.reject.isPending} disabled={busy} onClick={() => muts.reject.mutate({ id: rec.id })}>Reject</Button>
-          </>
-        )}
-        {rec.status !== "archived" && (
-          <Button size="sm" variant="ghost" loading={muts.archive.isPending} disabled={busy} onClick={() => muts.archive.mutate(rec.id)}>Archive</Button>
-        )}
-      </div>
-    </li>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Prompt packs attached to this opportunity, with export download.
-// ---------------------------------------------------------------------------
-
-function PromptPacksPanel({ opportunityId }: { opportunityId: string }) {
-  const packs = usePromptPacks({ retry: false });
-  const exporter = usePromptPackExport();
-
-  return (
-    <Panel title="Prompt packs">
-      <QueryView
-        query={packs}
-        loading={<Skeleton lines={3} />}
-        empty={<EmptyState compact icon={<FileText size={18} />} title="No prompt packs yet" description="Prompt packs are bundles of generation-ready prompts the planner can attach to an opportunity." />}
-        errorTitle="Prompt packs unavailable"
-      >
-        {(rows) => {
-          const mine = rows.filter((p) => p.opportunity_id === opportunityId);
-          if (!mine.length)
-            return <EmptyState compact icon={<FileText size={18} />} title="No prompt packs for this opportunity" description="Generate prompts from a concept in Prompt Studio first." />;
-          return (
-            <ul className="space-y-2.5">
+          return (            <ul className="space-y-2.5">
               {mine.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-border bg-bg-secondary px-3.5 py-3">
                   <FileText size={15} className="shrink-0 text-text-muted" aria-hidden />
@@ -646,7 +567,7 @@ function ConceptsPanel({ opportunityId, onCreateIdea, onPromptIdea }: { opportun
                 </div>
                 <p className="mt-1 line-clamp-2 text-xs text-text-muted">{i.concept}</p>
                 <div className="mt-2 flex gap-2">
-                  <Button size="sm" variant="outline" icon={<Wand2 size={13} />} onClick={() => onPromptIdea(i)}>Prompt Studio</Button>
+                  <Button size="sm" variant="outline" icon={<Wand2 size={13} />} onClick={() => onPromptIdea(i)}>Generate prompt</Button>
                 </div>
               </div>
             ))}
@@ -751,59 +672,409 @@ function CreateIdeaModal({ open, onClose, opportunity }: { open: boolean; onClos
 }
 
 // ---------------------------------------------------------------------------
-// Prompt Studio link: generate a prompt for an idea, then open the studio
+// Asset analyzer: original prompt generation per opportunity.
+// POST /api/asset-analysis/generate → poll the job (same useJobPoll pattern
+// as PromptLinkModal) → render the completed analysis verbatim.
+// Prompt caching: an existing completed analysis is shown (prefilled) instead
+// of regenerating. Never invents content client-side.
 // ---------------------------------------------------------------------------
 
-function PromptLinkModal({ idea, onClose }: { idea: Idea | null; onClose: () => void }) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const prompts = usePromptMutations();
-  const [jobId, setJobId] = useState<string | null>(null);
-  const assetType = idea?.kind === "image" ? "IMAGE" : "VIDEO";
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for contexts where the async clipboard API is unavailable.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
 
+const AA_SIGNAL_TONE: Record<MarketSignalLevel, "success" | "warning" | "muted"> = {
+  HIGH: "success",
+  MEDIUM: "warning",
+  LOW: "muted",
+};
+
+const AA_MOMENTUM_TONE: Record<MarketMomentum, "success" | "muted" | "warning" | "danger"> = {
+  STRONGLY_RISING: "success",
+  RISING: "success",
+  STABLE: "muted",
+  DECLINING: "warning",
+  STRONGLY_DECLINING: "danger",
+};
+
+function AaInfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 py-1 text-[13px]">
+      <dt className="w-36 shrink-0 text-text-muted">{label}</dt>
+      <dd className="min-w-0 flex-1 text-text-primary">{children}</dd>
+    </div>
+  );
+}
+
+function AaSectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="micro-label mb-2">{children}</p>;
+}
+
+function PromptBlock({
+  label,
+  sub,
+  text,
+  copyKey,
+  copiedKey,
+  onCopy,
+}: {
+  label: string;
+  sub: string;
+  text: string;
+  copyKey: string;
+  copiedKey: string | null;
+  onCopy: (key: string, text: string, what: string) => void;
+}) {
+  const copied = copiedKey === copyKey;
+  return (
+    <div className="rounded-lg border border-border bg-bg-secondary p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="micro-label">
+          {label} <span className="ml-1 font-normal normal-case tracking-normal text-text-muted">{sub}</span>
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          icon={copied ? <Check size={13} /> : undefined}
+          onClick={() => onCopy(copyKey, text, `${label} copied.`)}
+        >
+          {copied ? "Copied" : "Copy prompt"}
+        </Button>
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-text-primary">{text}</p>
+    </div>
+  );
+}
+
+function AssetAnalysisResult({
+  analysis,
+  copiedKey,
+  onCopy,
+  onRegenerate,
+  regenerating,
+}: {
+  analysis: AssetAnalysis;
+  copiedKey: string | null;
+  onCopy: (key: string, text: string, what: string) => void;
+  onRegenerate: () => void;
+  regenerating: boolean;
+}) {
+  const mc = analysis.market_context;
+  const ca = analysis.commercial_analysis;
+
+  const copyAll = () => {
+    const all = [
+      "ORIGINAL CONCEPT",
+      analysis.original_concept,
+      "",
+      "PROMPT A — PRIMARY",
+      analysis.prompt_a,
+      "",
+      "PROMPT B — ALTERNATIVE",
+      analysis.prompt_b,
+      "",
+      "PROMPT C — DIFFERENT USE CASE",
+      analysis.prompt_c,
+      "",
+      "NEGATIVE PROMPT",
+      analysis.negative_prompt,    ].join("\n");
+    onCopy("all", all, "Concept and all prompts copied.");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-text-muted">
+          Viewing existing analysis — generated {timeAgo(analysis.created_at)}. Switch asset type or
+          regenerate for a fresh run.
+        </p>
+        <Button size="sm" variant="outline" loading={regenerating} onClick={onRegenerate}>
+          Regenerate
+        </Button>
+      </div>
+
+      {/* Selected asset */}
+      <div>
+        <AaSectionLabel>Selected asset</AaSectionLabel>
+        <dl className="rounded-lg border border-border bg-bg-secondary px-3.5 py-2">
+          <AaInfoRow label="Title">{mc.title}</AaInfoRow>
+          <AaInfoRow label="Asset type">
+            <Badge tone="accent">{enumLabel(analysis.asset_type)}</Badge>
+          </AaInfoRow>
+          <AaInfoRow label="Model">{analysis.model}</AaInfoRow>
+        </dl>
+      </div>
+
+      {/* Market information */}
+      <div>
+        <AaSectionLabel>Market information</AaSectionLabel>
+        <dl className="rounded-lg border border-border bg-bg-secondary px-3.5 py-2">
+          <AaInfoRow label="Category">{mc.category}</AaInfoRow>
+          <AaInfoRow label="Topic">{mc.topic}</AaInfoRow>
+          <AaInfoRow label="7D / 30D signal">
+            <span className="flex items-center gap-1">
+              <Badge tone={AA_SIGNAL_TONE[mc.signal_7d]}>7D {mc.signal_7d}</Badge>
+              <Badge tone={AA_SIGNAL_TONE[mc.signal_30d]}>30D {mc.signal_30d}</Badge>
+            </span>
+          </AaInfoRow>
+          <AaInfoRow label="Momentum">
+            <Badge tone={AA_MOMENTUM_TONE[mc.momentum]}>{enumLabel(mc.momentum)}</Badge>
+          </AaInfoRow>
+          <AaInfoRow label="Source">{mc.source ?? "—"}{mc.source_type ? ` · ${mc.source_type}` : ""}</AaInfoRow>
+          <AaInfoRow label="Collected">{mc.collected_at ? timeAgo(mc.collected_at) : "—"}</AaInfoRow>
+          <AaInfoRow label="Provenance">
+            <ProvenanceBadge provenance={mc.provenance} />
+          </AaInfoRow>
+        </dl>
+      </div>
+
+      {/* Keywords */}
+      {(mc.keywords?.length ?? 0) > 0 && (
+        <div>
+          <AaSectionLabel>Keywords</AaSectionLabel>
+          <div className="flex flex-wrap gap-1.5">
+            {mc.keywords.map((k) => (
+              <span key={k} className="rounded-full bg-text-primary/[0.06] px-2.5 py-1 text-[12px] text-text-secondary">
+                {k}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Commercial analysis */}
+      <div>
+        <AaSectionLabel>Commercial analysis</AaSectionLabel>
+        <dl className="rounded-lg border border-border bg-bg-secondary px-3.5 py-2">
+          <AaInfoRow label="Topic">{ca.topic}</AaInfoRow>
+          <AaInfoRow label="Category">{ca.category}</AaInfoRow>
+          <AaInfoRow label="Micro-niche">{ca.micro_niche}</AaInfoRow>
+          <AaInfoRow label="Primary keywords">{ca.primary_keywords.join(", ")}</AaInfoRow>
+          <AaInfoRow label="Secondary keywords">{ca.secondary_keywords.join(", ")}</AaInfoRow>
+          <AaInfoRow label="Commercial use case">{ca.commercial_use_case}</AaInfoRow>
+          <AaInfoRow label="Subject">{ca.subject}</AaInfoRow>
+          <AaInfoRow label="Environment">{ca.environment}</AaInfoRow>
+          <AaInfoRow label="Composition">{ca.composition}</AaInfoRow>
+          <AaInfoRow label="Visual characteristics">{ca.visual_characteristics}</AaInfoRow>
+          <AaInfoRow label="Content type">{ca.content_type}</AaInfoRow>
+        </dl>
+      </div>
+
+      {/* Original concept */}
+      <div>
+        <AaSectionLabel>Original concept</AaSectionLabel>
+        <p className="whitespace-pre-wrap rounded-lg border border-border bg-bg-secondary px-3.5 py-3 text-[13px] leading-relaxed text-text-primary">
+          {analysis.original_concept}
+        </p>
+      </div>
+
+      {/* Prompts */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <AaSectionLabel>Prompts</AaSectionLabel>
+          <Button size="sm" variant="primary" onClick={copyAll}>
+            {copiedKey === "all" ? "Copied" : "Copy all"}
+          </Button>
+        </div>
+        <PromptBlock label="Prompt A" sub="primary" text={analysis.prompt_a} copyKey="a" copiedKey={copiedKey} onCopy={onCopy} />
+        <PromptBlock label="Prompt B" sub="alternative" text={analysis.prompt_b} copyKey="b" copiedKey={copiedKey} onCopy={onCopy} />
+        <PromptBlock label="Prompt C" sub="different use case" text={analysis.prompt_c} copyKey="c" copiedKey={copiedKey} onCopy={onCopy} />
+        <PromptBlock label="Negative prompt" sub="" text={analysis.negative_prompt} copyKey="neg" copiedKey={copiedKey} onCopy={onCopy} />
+      </div>
+    </div>
+  );
+}
+
+function AssetAnalysisModal({
+  open,
+  onClose,
+  opportunity,
+  defaultAssetType = "image",
+}: {
+  open: boolean;
+  onClose: () => void;
+  opportunity: Opportunity;
+  defaultAssetType?: "image" | "video";
+}) {
+  const { toast } = useToast();
+  const [assetType, setAssetType] = useState<"image" | "video">("image");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [failMsg, setFailMsg] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const existing = useAssetAnalysis(open ? opportunity.id : null, assetType);
+  const gen = useAssetAnalysisGenerate();
+
+  // When opened with a preselected asset type (e.g. from a concept's
+  // "Generate prompt" action), apply it and reset transient job state.
+  useEffect(() => {
+    if (open) {
+      setAssetType(defaultAssetType);
+      setJobId(null);
+      setFailMsg(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultAssetType]);
+
+  const switchAssetType = (v: string) => {
+    setAssetType(v as "image" | "video");
+    setJobId(null);
+    setFailMsg(null);
+  };
+
+  // Poll the job the same way other long-running jobs are polled:
+  // GET /agents/jobs/{job_id} until terminal. On success the completed analysis is re-read from the
+  // by-opportunity cache endpoint (prompt caching); on failure the backend's
+  // own error message is shown — never invented here.
   const poll = useJobPoll(jobId, {
     onDone: (job) => {
       setJobId(null);
       if (job.status === "succeeded") {
-        toast({ title: "Prompt generated", description: "Opening Prompt Studio…", tone: "success" });
-        router.push(`/prompt-studio?idea=${idea?.id}`);
+        toast({ title: "Analysis ready", description: "Original prompts are generated.", tone: "success" });
+        void existing.refetch();
       } else {
-        toast({ title: "Prompt generation failed", description: job.error?.message ?? "Try again later.", tone: "warning" });
+        setFailMsg(job.error?.message ?? "The backend did not return an error message.");
       }
-      onClose();
     },
   });
 
   const generate = () => {
-    if (!idea) return;
-    prompts.generate.mutate(
-      { idea_id: idea.id, asset_type: assetType },
+    if (!open || gen.generate.isPending || poll.isPolling) return;
+    setFailMsg(null);
+    gen.generate.mutate(
+      { opportunity_id: opportunity.id, asset_type: assetType },
       { onSuccess: (r) => setJobId(r.job_id) },
     );
   };
 
+  const copy = async (key: string, text: string, what: string) => {
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
+      toast({ title: "Copied", description: what, tone: "success", durationMs: 1500 });
+    } else {
+      toast({ title: "Copy failed", description: "Select and copy the text manually.", tone: "warning" });
+    }
+  };
+
+  // Prompt caching: a completed analysis is shown (prefilled) instead of
+  // regenerating — a fresh run only happens when none exists.
+  const completed =
+    existing.data && existing.data.status === "completed" && existing.data.prompt_a
+      ? existing.data
+      : null;
+  const running = poll.isPolling || !!jobId;
+  const showResult = !running && !failMsg && !!completed;
+  const showGenerate = !running && !failMsg && !completed;
+
   return (
-    <Modal open={!!idea} onClose={onClose} title="Generate prompt in Prompt Studio"
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Asset analyzer — original prompts"
+      wide
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" loading={prompts.generate.isPending || poll.isPolling} onClick={generate} data-testid="prompt-generate-open">
-            {poll.isPolling ? `Generating… ${Math.round((poll.job?.progress ?? 0) * 100)}%` : "Generate & open studio"}
-          </Button>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          {showGenerate && (
+            <Button variant="primary" loading={gen.generate.isPending} onClick={generate} data-testid="asset-analysis-generate">
+              Generate original prompt
+            </Button>
+          )}
         </>
-      }>
-      {idea && (
-        <div className="space-y-3">
-          <p className="text-xs text-text-muted">
-            This starts a <strong className="text-text-primary">PROMPT_GENERATION</strong> job for{" "}
-            <strong className="text-text-primary">{idea.title}</strong> ({assetType.toLowerCase()}). When it succeeds,
-            the studio opens filtered to this idea. The prompt text is generated — review and edit before producing.
-          </p>
-          <WhyThis label="What happens next">
-            <p>Generation runs on the backend; this screen polls the job. Nothing is auto-approved — you edit the prompt in the studio.</p>
-          </WhyThis>
-        </div>
-      )}
+      }
+    >
+      <div className="space-y-4">
+        <Tabs
+          tabs={[
+            { value: "image", label: "Image" },
+            { value: "video", label: "Video" },
+          ]}
+          value={assetType}
+          onChange={switchAssetType}
+        />
+
+        {running && (
+          <div className="space-y-2.5">
+            <p className="text-[13px] text-text-secondary">
+              Analyzing market data and generating original prompts…{" "}
+              <strong className="tnum text-text-primary">{Math.round((poll.job?.progress ?? 0) * 100)}%</strong>
+            </p>
+            <Skeleton lines={6} />
+          </div>
+        )}
+
+        {!running && failMsg && (
+          <EmptyState
+            title="Generation failed"
+            description={failMsg}
+            action={
+              <Button size="sm" variant="primary" onClick={generate}>
+                Try again
+              </Button>
+            }
+          />
+        )}
+
+        {!running && !failMsg && existing.isError && (
+          <EmptyState
+            title="Could not check for an existing analysis"
+            description={existing.error?.envelope?.message ?? "Try again."}
+            action={
+              <Button size="sm" variant="outline" onClick={() => existing.refetch()}>
+                Retry
+              </Button>
+            }
+          />
+        )}
+
+        {showGenerate && !existing.isError && (
+          <div className="space-y-3">
+            {existing.isLoading ? (
+              <Skeleton lines={3} />
+            ) : (
+              <p className="text-[13px] leading-relaxed text-text-secondary">
+                Generate market-grounded original prompts for{" "}
+                <strong className="text-text-primary">{opportunity.title}</strong> ({assetType}). The analyzer
+                reads live market signals for this opportunity&rsquo;s category, scores commercial angles, then
+                writes an original concept plus three production prompts — concept, Prompt A (primary),
+                Prompt B (alternative), Prompt C (different use case), and a negative prompt. Everything
+                shown is generated by the backend; nothing is invented in this screen.
+              </p>
+            )}
+          </div>
+        )}
+
+        {showResult && completed && (
+          <AssetAnalysisResult
+            analysis={completed}
+            copiedKey={copiedKey}
+            onCopy={copy}
+            onRegenerate={generate}
+            regenerating={gen.generate.isPending}
+          />
+        )}
+      </div>
     </Modal>
   );
 }

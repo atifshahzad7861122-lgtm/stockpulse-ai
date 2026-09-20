@@ -1,8 +1,10 @@
 "use client";
 /**
- * Daily Intelligence (Phase 3) — the daily briefing in four moves:
- * MARKET (what's rising) → PERSONAL (what works for you) → FUSION (market ×
- * you, scored) → ACTION (what to create today, approve/reject/archive).
+ * Daily Intelligence (Phase 3) — the daily briefing in two moves:
+ * MARKET (what's rising) → ACTION (what to create today, approve/reject/archive).
+ *
+ * Product simplification (2026-09-20): the PERSONAL and FUSION zones are hidden
+ * from the rendered UI but their components/files are kept intact.
  *
  * Every backend contract endpoint is optional at render time: missing or
  * unconfigured modules degrade to honest empty/error states, never crashes.
@@ -395,7 +397,7 @@ function FusionZone() {
 
 // ===========================================================================
 // ACTION — WHAT TO CREATE TODAY
-// ============================================================================
+// ===========================================================================
 
 const REC_STATUS_TONE: Record<ProductionRecommendation["status"], "muted" | "info" | "success" | "warning" | "neutral"> = {
   recommended: "warning",
@@ -747,12 +749,19 @@ export default function DailyPage() {
     <div className="space-y-4">
       <PageHeader
         title="Daily Intelligence"
-        description="Market → Personal → Fusion → Action. Four zones, one flow: see what's rising, check what works for you, score opportunities against both, then approve today's production plan."
+        description="Market → Action. Two zones, one flow: see what's rising, then approve today's production plan. (Personal performance and fusion scoring were part of the product before 2026-09-20; the underlying code is kept but the zones are hidden.)"
         badge={<Badge tone="accent">Phase 3</Badge>}
       />
       <MarketZone />
-      <PersonalZone />
-      <FusionZone />
+      {/*
+        Product simplification (2026-09-20): the Personal performance, Personal
+        fit, and Opportunity Fusion zones are hidden from the UI — the page is
+        now Market → Action only. The underlying components (PersonalZone,
+        FusionZone, and their supporting hooks/queries) are intentionally kept
+        so the feature can be re-enabled without re-writing.
+      */}
+      {false && <PersonalZone />}
+      {false && <FusionZone />}
       <ActionZone />
       <CapacitySettingsForm />
       <p className="flex items-start gap-2 text-xs text-text-muted">
