@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.agents import _base
 from app.models.platform import AgentRun
 from app.models.taxonomy import Category
-from app.providers.providers import LLMRequest, get_llm_provider
+from app.providers.providers import LLMRequest, PROVENANCE_MOCK, get_llm_provider
 
 
 def run(db: Session, run: AgentRun, input: dict[str, Any]) -> dict[str, Any]:
@@ -43,16 +43,25 @@ def run(db: Session, run: AgentRun, input: dict[str, Any]) -> dict[str, Any]:
                 "category_name": cat.name,
                 "proposed_subcategories": response.text,
                 "model": response.model,
-                "provenance": "MOCK",
+                "provenance": response.provenance,
                 "status": "proposed — awaiting user approval (never auto-applied)",
             }
         )
     _base.info(
         db, run, f"Proposed taxonomy additions for {len(proposals)} categories (approval required)"
     )
+    if proposals and proposals[0]["provenance"] == PROVENANCE_MOCK:
+        note_suffix = _base.MOCK_NOTE
+    else:
+        note_suffix = (
+            f"Drafted with {proposals[0]['model']} ({proposals[0]['provenance']}) — "
+            "not verified market data."
+            if proposals
+            else "No proposals generated."
+        )
     return {
         "proposals": proposals,
         "proposal_count": len(proposals),
         "note": "Proposals only — the agent never modifies taxonomy without user approval. "
-        + _base.MOCK_NOTE,
+        + note_suffix,
     }
